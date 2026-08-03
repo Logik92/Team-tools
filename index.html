@@ -1254,8 +1254,11 @@ applyEventSettings(events[0]);
 function formatPressure(v){
   if (!v) return '';
   const normalized = String(v).trim().replace(',', '.');
-  const f = parseFloat(normalized);
-  if (isNaN(f)) return '';
+  if (!normalized) return '';
+  const n = parseFloat(normalized);
+  if (isNaN(n)) return '';
+  // no decimal point typed — treat as shorthand for centibars (50 -> 0.50, 80 -> 0.80)
+  const f = normalized.includes('.') ? n : n / 100;
   return f.toFixed(2);
 }
 function formatRimTemp(v){
