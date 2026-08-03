@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Run Report</title>
+<style>
+  :root{
+    --asphalt:#15181c;
+    --panel:#1e2227;
+    --line:#31363d;
+    --amber:#ffb31a;
+    --amber-dim:#8a6620;
+    --white:#f2f0ea;
+    --grey:#9aa0a8;
+    --green:#3ecf8e;
+    --red:#e05a5a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--asphalt);
+    background-image:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 14px);
+    color:var(--white);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height:100vh;
+    padding:18px 16px 40px;
+  }
+  .board{ max-width:520px; margin:0 auto; }
+  .header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    border-bottom:2px solid var(--amber);
+    padding-bottom:10px; margin-bottom:18px;
+  }
+  .header h1{
+    font-size:19px; letter-spacing:0.06em; text-transform:uppercase;
+    margin:0; font-weight:700; color:var(--amber);
+  }
+  .header span{ font-size:11px; color:var(--grey); letter-spacing:0.04em; }
+  .field{ margin-bottom:14px; }
+  label{
+    display:block; font-size:11px; text-transform:uppercase;
+    letter-spacing:0.08em; color:var(--grey); margin-bottom:6px;
+  }
+  label .ic{ margin-right:6px; }
+  input, select{
+    width:100%; background:var(--panel); border:1px solid var(--line);
+    color:var(--white); padding:12px; border-radius:6px; font-size:16px;
+    font-family:inherit; -webkit-appearance:none; appearance:none;
+  }
+  input:focus, select:focus{ outline:none; border-color:var(--amber); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  select{
+    background-image:linear-gradient(45deg, transparent 50%, var(--grey) 50%), linear-gradient(135deg, var(--grey) 50%, transparent 50%);
+    background-position: calc(100% - 18px) calc(1em + 2px), calc(100% - 13px) calc(1em + 2px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+  .genbtn{
+    width:100%; padding:15px; background:var(--amber); color:#1a1400;
+    border:none; border-radius:6px; font-size:15px; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase; margin-top:6px; cursor:pointer;
+  }
+  .genbtn:active{ opacity:0.85; }
+  .output-wrap{ margin-top:22px; display:none; }
+  .output-wrap.show{ display:block; }
+  pre{
+    background:#0e1114; border:1px solid var(--amber-dim); border-radius:6px;
+    padding:14px; font-size:15px; line-height:1.6; white-space:pre-wrap;
+    word-break:break-word; color:var(--white);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin:0 0 10px;
+  }
+  .copybtn{
+    width:100%; padding:14px; background:transparent; border:1.5px solid var(--green);
+    color:var(--green); border-radius:6px; font-size:14px; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase; cursor:pointer;
+  }
+  .copybtn.copied{ background:var(--green); color:#0a1a12; }
+  .wabtn{
+    width:100%; padding:14px; background:#25D366; border:none;
+    color:#08210f; border-radius:6px; font-size:14px; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; margin-bottom:10px;
+  }
+  .wabtn:active{ opacity:0.85; }
+  .hint{ font-size:11px; color:var(--grey); text-align:center; margin-top:22px; line-height:1.5; }
+
+  .divider{
+    border:none; border-top:1px dashed var(--line); margin:26px 0 18px;
+  }
+  .drawer-toggle{
+    width:100%; text-align:left; background:none; border:1px solid var(--line);
+    color:var(--grey); padding:10px 12px; border-radius:6px; font-size:12px;
+    text-transform:uppercase; letter-spacing:0.06em; cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .drawer{ display:none; margin-top:12px; }
+  .drawer.open{ display:block; }
+  .driver-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:9px 12px; margin-bottom:6px; font-size:14px;
+  }
+  .driver-row .rm{
+    background:none; border:none; color:var(--red); font-size:18px;
+    line-height:1; cursor:pointer; padding:4px 8px;
+  }
+  .addrow{ display:grid; grid-template-columns:1fr 90px 44px; gap:8px; margin-top:10px; }
+  .addbtn{
+    background:var(--amber); color:#1a1400; border:none; border-radius:6px;
+    font-size:20px; font-weight:700; cursor:pointer;
+  }
+  .syncbox{ margin-top:12px; }
+  .syncbtns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .syncbtn{
+    padding:11px; background:var(--panel); border:1px solid var(--line);
+    color:var(--white); border-radius:6px; font-size:13px; font-weight:600;
+    text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;
+  }
+  textarea{
+    width:100%; min-height:80px; background:#0e1114; border:1px solid var(--line);
+    color:var(--white); padding:10px; border-radius:6px; font-size:13px;
+    font-family:monospace; display:none; margin-top:8px;
+  }
+  textarea.show{ display:block; }
+  .note{ font-size:11px; color:var(--grey); margin-top:8px; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="header">
+    <h1>Run Report</h1>
+    <span id="clock"></span>
+  </div>
+
+  <div class="field">
+    <label><span class="ic">👤</span>Driver</label>
+    <select id="driverSelect"></select>
+  </div>
+
+  <div id="manualDriverWrap" style="display:none;">
+    <div class="field row2">
+      <div>
+        <label><span class="ic">🇬🇧</span>Flag</label>
+        <select id="manualFlag">
+          <option value="🇮🇹">🇮🇹 Italy</option>
+          <option value="🇬🇧">🇬🇧 UK</option>
+          <option value="🇪🇸">🇪🇸 Spain</option>
+          <option value="🇫🇷">🇫🇷 France</option>
+          <option value="🇩🇪">🇩🇪 Germany</option>
+          <option value="🇳🇱">🇳🇱 Netherlands</option>
+          <option value="🇧🇪">🇧🇪 Belgium</option>
+          <option value="🇺🇸">🇺🇸 USA</option>
+          <option value="🇲🇽">🇲🇽 Mexico</option>
+          <option value="🇵🇹">🇵🇹 Portugal</option>
+          <option value="🇨🇳">🇨🇳 China</option>
+          <option value="🇮🇩">🇮🇩 Indonesia</option>
+          <option value="🏁">🏁 Other</option>
+        </select>
+      </div>
+      <div>
+        <label>Name</label>
+        <input id="manualName" type="text" placeholder="Guest driver">
+      </div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label><span class="ic">🏁</span>Session</label>
+    <select id="session">
+      <option>Free Practice</option>
+      <option>Superheat</option>
+      <option>Qualifying</option>
+      <option>Heat 1</option>
+      <option>Heat 2</option>
+      <option>Heat 3</option>
+      <option>Prefinal</option>
+      <option>Final</option>
+      <option value="__custom">Custom…</option>
+    </select>
+    <input id="sessionCustom" type="text" placeholder="Type session name" style="margin-top:8px; display:none;">
+  </div>
+
+  <div class="field">
+    <label><span class="ic">🏎️</span>Kart / Chassis</label>
+    <input id="kart" type="text" placeholder="KR1 E2502081" autocapitalize="characters">
+  </div>
+
+  <div class="field">
+    <label><span class="ic">⚙️</span>Gear Ratio (front - rear)</label>
+    <div class="row2">
+      <input id="gearFront" type="number" inputmode="numeric" placeholder="11">
+      <input id="gearRear" type="number" inputmode="numeric" placeholder="76">
+    </div>
+  </div>
+
+  <div class="field">
+    <label><span class="ic">🔩</span>Axle Type</label>
+    <select id="axle">
+      <option>S</option>
+      <option>S1</option>
+      <option>S2</option>
+      <option>M</option>
+      <option>H1</option>
+      <option>H</option>
+      <option>HH</option>
+      <option value="__custom">Other…</option>
+    </select>
+    <input id="axleCustom" type="text" placeholder="Type axle type" style="margin-top:8px; display:none;">
+  </div>
+
+  <div class="field">
+    <label><span class="ic">🛞</span>Tyres — laps used</label>
+    <input id="tyreLaps" type="number" inputmode="numeric" placeholder="69">
+  </div>
+
+  <div class="field">
+    <label><span class="ic">🛞</span>Tyre pressure (cold @ hot)</label>
+    <div class="row2">
+      <input id="pressCold" type="text" inputmode="decimal" placeholder="36">
+      <input id="pressHot" type="text" inputmode="decimal" placeholder="17">
+    </div>
+  </div>
+
+  <div class="field">
+    <label><span class="ic">⏱️</span>Best Time</label>
+    <input id="time" type="text" inputmode="decimal" placeholder="50,0">
+  </div>
+
+  <button class="genbtn" onclick="generate()">Generate Report</button>
+
+  <div class="output-wrap" id="outputWrap">
+    <pre id="output"></pre>
+    <button class="wabtn" onclick="openWhatsApp()">Open in WhatsApp</button>
+    <button class="copybtn" id="copyBtn" onclick="copyOutput()">Copy instead</button>
+  </div>
+
+  <hr class="divider">
+
+  <button class="drawer-toggle" onclick="toggleDrawer('driversDrawer', this)">
+    <span>Edit driver list</span><span>▾</span>
+  </button>
+  <div class="drawer" id="driversDrawer">
+    <div id="driverList"></div>
+    <div class="addrow">
+      <input id="newDriverName" type="text" placeholder="Driver name" autocapitalize="words">
+      <select id="newDriverFlag">
+        <option value="🇮🇹">🇮🇹 ITA</option>
+        <option value="🇬🇧">🇬🇧 GBR</option>
+        <option value="🇪🇸">🇪🇸 ESP</option>
+        <option value="🇫🇷">🇫🇷 FRA</option>
+        <option value="🇩🇪">🇩🇪 GER</option>
+        <option value="🇳🇱">🇳🇱 NED</option>
+        <option value="🇧🇪">🇧🇪 BEL</option>
+        <option value="🇺🇸">🇺🇸 USA</option>
+        <option value="🇲🇽">🇲🇽 MEX</option>
+        <option value="🇵🇹">🇵🇹 POR</option>
+        <option value="🇨🇳">🇨🇳 CHN</option>
+        <option value="🇮🇩">🇮🇩 IDN</option>
+        <option value="🏁">🏁 Other</option>
+      </select>
+      <button class="addbtn" onclick="addDriver()">+</button>
+    </div>
+
+    <div class="syncbox">
+      <div class="syncbtns">
+        <button class="syncbtn" onclick="showExport()">Export list</button>
+        <button class="syncbtn" onclick="showImport()">Import list</button>
+      </div>
+      <textarea id="exportBox" readonly></textarea>
+      <textarea id="importBox" placeholder="Paste roster code here"></textarea>
+      <button class="syncbtn" id="importApplyBtn" style="display:none; width:100%; margin-top:8px;" onclick="applyImport()">Apply</button>
+      <div class="note">When someone updates the list, tap Export and post that code in the WhatsApp group. Everyone else pastes it into Import so every phone matches.</div>
+    </div>
+  </div>
+
+  <div class="hint">Chassis numbers are remembered per driver for this session — pick the driver again and it auto-fills. Export the roster occasionally to back it up, since it resets if the page is closed.</div>
+</div>
+
+<script>
+// ---- starting roster ----
+let drivers = [
+  {name:"Baglin", flag:"🇬🇧"},
+  {name:"Blanco", flag:"🇮🇹"},
+  {name:"Turney", flag:"🇬🇧"},
+  {name:"Weiland", flag:"🇺🇸"},
+  {name:"Sini", flag:"🇮🇩"},
+  {name:"Xie", flag:"🇨🇳"},
+  {name:"Green", flag:"🇬🇧"},
+  {name:"Nuvolini", flag:"🇫🇷"},
+  {name:"Perico", flag:"🇮🇹"},
+  {name:"De La Vega", flag:"🇲🇽"},
+  {name:"Truchot", flag:"🇺🇸"},
+  {name:"D. Ferriera", flag:"🇵🇹"},
+  {name:"N. Ferriera", flag:"🇵🇹"},
+  {name:"Robertson", flag:"🇬🇧"},
+  {name:"Di Pietratonio", flag:"🇮🇹"}
+];
+
+// in-memory only — resets on page reload, cleared between mechanics' own sessions
+const chassisMemory = {};
+
+const driverSelect = document.getElementById('driverSelect');
+const manualDriverWrap = document.getElementById('manualDriverWrap');
+
+function renderDriverSelect(){
+  const prev = driverSelect.value;
+  driverSelect.innerHTML = '';
+  drivers.forEach(d=>{
+    const opt = document.createElement('option');
+    opt.value = d.name;
+    opt.textContent = `${d.flag} ${d.name}`;
+    driverSelect.appendChild(opt);
+  });
+  const other = document.createElement('option');
+  other.value = '__other';
+  other.textContent = '🏁 Other / Guest';
+  driverSelect.appendChild(other);
+  if ([...driverSelect.options].some(o=>o.value===prev)) driverSelect.value = prev;
+}
+
+function renderDriverList(){
+  const list = document.getElementById('driverList');
+  list.innerHTML = '';
+  drivers.forEach((d, i)=>{
+    const row = document.createElement('div');
+    row.className = 'driver-row';
+    row.innerHTML = `<span>${d.flag} ${d.name}</span><button class="rm" onclick="removeDriver(${i})">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function addDriver(){
+  const nameInput = document.getElementById('newDriverName');
+  const name = nameInput.value.trim();
+  if (!name) return;
+  const flag = document.getElementById('newDriverFlag').value;
+  drivers.push({name, flag});
+  nameInput.value = '';
+  renderDriverList();
+  renderDriverSelect();
+}
+
+function removeDriver(i){
+  drivers.splice(i,1);
+  renderDriverList();
+  renderDriverSelect();
+}
+
+driverSelect.addEventListener('change', function(){
+  if (this.value === '__other'){
+    manualDriverWrap.style.display = 'block';
+    document.getElementById('kart').value = '';
+  } else {
+    manualDriverWrap.style.display = 'none';
+    if (chassisMemory[this.value]) document.getElementById('kart').value = chassisMemory[this.value];
+  }
+});
+
+function toggleDrawer(id, btn){
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+  btn.querySelector('span:last-child').textContent = el.classList.contains('open') ? '▴' : '▾';
+}
+
+function showExport(){
+  const box = document.getElementById('exportBox');
+  document.getElementById('importBox').classList.remove('show');
+  document.getElementById('importApplyBtn').style.display = 'none';
+  box.value = 'ROSTER::' + btoa(unescape(encodeURIComponent(JSON.stringify(drivers))));
+  box.classList.add('show');
+  box.focus(); box.select();
+}
+
+function showImport(){
+  document.getElementById('exportBox').classList.remove('show');
+  const box = document.getElementById('importBox');
+  box.classList.add('show');
+  document.getElementById('importApplyBtn').style.display = 'block';
+  box.focus();
+}
+
+function applyImport(){
+  const raw = document.getElementById('importBox').value.trim();
+  if (!raw.startsWith('ROSTER::')){
+    alert('That doesn\'t look like a roster code.');
+    return;
+  }
+  try{
+    const parsed = JSON.parse(decodeURIComponent(escape(atob(raw.replace('ROSTER::','')))));
+    if (!Array.isArray(parsed)) throw new Error('bad format');
+    drivers = parsed;
+    renderDriverList();
+    renderDriverSelect();
+    document.getElementById('importBox').classList.remove('show');
+    document.getElementById('importApplyBtn').style.display = 'none';
+    alert('Roster updated: ' + drivers.length + ' drivers.');
+  } catch(e){
+    alert('Could not read that code — check it was pasted in full.');
+  }
+}
+
+renderDriverSelect();
+renderDriverList();
+
+// ---- clock ----
+const clock = document.getElementById('clock');
+const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+function updateClock(){
+  const now = new Date();
+  clock.textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+document.getElementById('session').addEventListener('change', function(){
+  document.getElementById('sessionCustom').style.display = this.value === '__custom' ? 'block' : 'none';
+});
+
+document.getElementById('axle').addEventListener('change', function(){
+  document.getElementById('axleCustom').style.display = this.value === '__custom' ? 'block' : 'none';
+});
+
+function generate(){
+  const now = new Date();
+  const dateStr = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+
+  let flag, driverName;
+  if (driverSelect.value === '__other'){
+    flag = document.getElementById('manualFlag').value;
+    driverName = document.getElementById('manualName').value.trim() || '—';
+  } else {
+    const d = drivers.find(x=>x.name === driverSelect.value);
+    flag = d ? d.flag : '🏁';
+    driverName = d ? d.name : '—';
+  }
+
+  const sessionSel = document.getElementById('session');
+  const session = sessionSel.value === '__custom'
+    ? (document.getElementById('sessionCustom').value.trim() || '—')
+    : sessionSel.value;
+  const kart = document.getElementById('kart').value.trim() || '—';
+
+  if (driverSelect.value !== '__other' && document.getElementById('kart').value.trim()){
+    chassisMemory[driverSelect.value] = document.getElementById('kart').value.trim();
+  }
+
+  const gf = document.getElementById('gearFront').value;
+  const gr = document.getElementById('gearRear').value;
+  const gear = (gf && gr) ? `${gf} - ${gr}` : '—';
+  const axleSel = document.getElementById('axle');
+  const axle = axleSel.value === '__custom'
+    ? (document.getElementById('axleCustom').value.trim() || '—')
+    : axleSel.value;
+  const tyreLaps = document.getElementById('tyreLaps').value;
+  const pc = document.getElementById('pressCold').value;
+  const ph = document.getElementById('pressHot').value;
+  let pressLine = '';
+  if (pc && ph){ pressLine = `${pc} @${ph} >> `; }
+  else if (pc){ pressLine = `${pc} >> `; }
+  const time = document.getElementById('time').value.trim() || '—';
+
+  const lines = [
+    `📅 ${dateStr}`,
+    `${flag} ${driverName}`,
+    ``,
+    `🏁 ${session}`,
+    `🏎️ ${kart}`,
+    `⚙️ ${gear}`,
+    `🔩 ${axle}`,
+    tyreLaps ? `🛞 ${tyreLaps} lap tyres` : `🛞 —`,
+    pressLine ? `🛞 ${pressLine}` : `🛞 —`,
+    `⏱️ ${time}`
+  ];
+
+  document.getElementById('output').textContent = lines.join('\n');
+  document.getElementById('outputWrap').classList.add('show');
+  document.getElementById('outputWrap').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function openWhatsApp(){
+  const text = document.getElementById('output').textContent;
+  window.location.href = 'whatsapp://send?text=' + encodeURIComponent(text);
+}
+
+function copyOutput(){
+  const text = document.getElementById('output').textContent;
+  const btn = document.getElementById('copyBtn');
+  const done = ()=>{
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = 'Copy to WhatsApp'; btn.classList.remove('copied'); }, 1600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e){}
+  document.body.removeChild(ta);
+  cb();
+}
+</script>
+</body>
+</html>
