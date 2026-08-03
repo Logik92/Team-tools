@@ -213,6 +213,13 @@
     background-size:cover; background-position:center;
     border:1px solid var(--line);
   }
+  .field-invalid{
+    border-color:var(--red) !important;
+    box-shadow:0 0 0 1px var(--red);
+  }
+  .tyre-grid.field-invalid{
+    outline:1.5px solid var(--red); outline-offset:2px; border-radius:6px;
+  }
 </style>
 </head>
 <body>
@@ -324,7 +331,10 @@
 
       <div class="field">
         <label><span class="ic">🏎️</span>Kart / Chassis</label>
-        <input id="kart_1" type="text" placeholder="KR1 E2502081" autocapitalize="characters">
+        <div class="row2">
+          <select id="chassisBrand_1"></select>
+          <input id="kart_1" type="text" placeholder="1111" autocapitalize="characters">
+        </div>
       </div>
 
       <div class="field">
@@ -351,7 +361,7 @@
         <input id="axleCustom_1" type="text" placeholder="Type axle type" style="margin-top:8px; display:none;">
       </div>
 
-      <div class="field">
+      <div class="field" id="hubWrap_1" style="display:none;">
         <label><span class="ic">🔘</span>Rear Hubs</label>
         <select id="hub_1">
           <option>Standard (Mag)</option>
@@ -495,13 +505,36 @@ let drivers = [
 function defaultEventSettings(){
   return { fp:20, heatLetters:7, prefinal:true, superheat:true, repechage:false,
     sprocketCat:'both', okjMin:10, okjMax:14, kzMin:10, kzMax:14,
-    customFields:[], bgImage:null, qualMode:'series' };
+    customFields:[], bgImage:null, qualMode:'series',
+    chassisBrands:['KR1','KR2'], showHubs:false };
 }
 let events = [
   Object.assign({name:"Round 1"}, defaultEventSettings()),
   Object.assign({name:"Round 2"}, defaultEventSettings()),
   Object.assign({name:"Test Day"}, defaultEventSettings())
 ];
+
+// ---- persistence (saves on this phone/browser only) ----
+const STORAGE_KEY = 'runreport_teamdata_v1';
+function saveTeamData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({drivers, events}));
+  } catch(e){ /* storage unavailable — fails silently, app still works this session */ }
+}
+function loadTeamData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed.drivers) && parsed.drivers.length) drivers = parsed.drivers;
+    if (Array.isArray(parsed.events) && parsed.events.length) events = parsed.events;
+  } catch(e){ /* ignore corrupted/blocked storage */ }
+}
+loadTeamData();
+
+// ---- edit password gate ----
+const EDIT_PASSWORD = 'Kr1kr2kr3!!';
+let editsUnlocked = false;
 
 // in-memory only — resets on page reload, cleared between mechanics' own sessions
 const chassisMemory = {};
@@ -545,12 +578,14 @@ function addDriver(){
   nameInput.value = '';
   renderDriverList();
   renderDriverSelect();
+  saveTeamData();
 }
 
 function removeDriver(i){
   drivers.splice(i,1);
   renderDriverList();
   renderDriverSelect();
+  saveTeamData();
 }
 
 // ---- events ----
@@ -642,6 +677,18 @@ function renderEventList(){
           </div>
         </div>
 
+        <div class="es-row">
+          <label>Show Rear Hubs field</label>
+          <input type="checkbox" ${ev.showHubs ? 'checked' : ''} onchange="updateEventSetting(${i},'showHubs',this.checked)">
+        </div>
+
+        <div class="es-sub">Chassis brands</div>
+        <div id="chassisBrandsList_${i}">${chassisBrandRowsHTML(i)}</div>
+        <div class="cf-add-row">
+          <input type="text" id="cbNew_${i}" placeholder="e.g. KR1">
+          <button class="addbtn" onclick="addChassisBrand(${i})">+</button>
+        </div>
+
         <div class="es-sub">Custom fields (max 5) — appear on every run for this event</div>
         <div id="customFieldsList_${i}">${customFieldRowsHTML(i)}</div>
         ${ev.customFields.length < 5 ? `
@@ -675,6 +722,31 @@ function customFieldRowsHTML(i){
   ).join('');
 }
 
+function chassisBrandRowsHTML(i){
+  return (events[i].chassisBrands || []).map((b,bi)=>
+    `<div class="driver-row"><span>${b}</span><button class="rm" onclick="removeChassisBrand(${i},${bi})">✕</button></div>`
+  ).join('');
+}
+
+function addChassisBrand(i){
+  const input = document.getElementById(`cbNew_${i}`);
+  const val = input.value.trim();
+  if (!val) return;
+  if (!events[i].chassisBrands) events[i].chassisBrands = [];
+  events[i].chassisBrands.push(val);
+  input.value = '';
+  renderEventList();
+  if (eventSelect.value === events[i].name) refreshAllChassisBrandDropdowns(events[i]);
+  saveTeamData();
+}
+
+function removeChassisBrand(i, bi){
+  events[i].chassisBrands.splice(bi, 1);
+  renderEventList();
+  if (eventSelect.value === events[i].name) refreshAllChassisBrandDropdowns(events[i]);
+  saveTeamData();
+}
+
 function addCustomField(i){
   if (events[i].customFields.length >= 5) return;
   const label = document.getElementById(`cfLabel_${i}`).value.trim();
@@ -689,12 +761,14 @@ function addCustomField(i){
   events[i].customFields.push({label, type, options});
   renderEventList();
   if (eventSelect.value === events[i].name) refreshCustomFieldsInRuns();
+  saveTeamData();
 }
 
 function removeCustomField(i, fi){
   events[i].customFields.splice(fi, 1);
   renderEventList();
   if (eventSelect.value === events[i].name) refreshCustomFieldsInRuns();
+  saveTeamData();
 }
 
 function handleBgImageUpload(i, inputEl){
@@ -705,6 +779,7 @@ function handleBgImageUpload(i, inputEl){
     events[i].bgImage = reader.result;
     renderEventList();
     if (eventSelect.value === events[i].name) applyEventBackground(events[i]);
+    saveTeamData();
   };
   reader.readAsDataURL(file);
 }
@@ -713,6 +788,7 @@ function removeBgImage(i){
   events[i].bgImage = null;
   renderEventList();
   if (eventSelect.value === events[i].name) applyEventBackground(events[i]);
+  saveTeamData();
 }
 
 function applyEventBackground(ev){
@@ -732,6 +808,7 @@ function applyEventBackground(ev){
 function updateEventSetting(i, key, value, isNumber){
   events[i][key] = isNumber ? Number(value) : value;
   if (eventSelect.value === events[i].name) applyEventSettings(events[i]);
+  saveTeamData();
 }
 
 function addEvent(){
@@ -742,6 +819,7 @@ function addEvent(){
   input.value = '';
   renderEventList();
   renderEventSelect();
+  saveTeamData();
 }
 
 function removeEvent(i){
@@ -749,6 +827,7 @@ function removeEvent(i){
   openEventSettingsIndex = null;
   renderEventList();
   renderEventSelect();
+  saveTeamData();
 }
 
 eventSelect.addEventListener('change', function(){
@@ -771,11 +850,25 @@ driverSelect.addEventListener('change', function(){
     document.getElementById('kart_1').value = '';
   } else {
     manualDriverWrap.style.display = 'none';
-    if (chassisMemory[this.value]) document.getElementById('kart_1').value = chassisMemory[this.value];
+    const mem = chassisMemory[this.value];
+    if (mem){
+      document.getElementById('kart_1').value = mem.num;
+      const brandSel = document.getElementById('chassisBrand_1');
+      if ([...brandSel.options].some(o=>o.value===mem.brand)) brandSel.value = mem.brand;
+    }
   }
 });
 
 function toggleDrawer(id, btn){
+  if ((id === 'driversDrawer' || id === 'eventsDrawer') && !editsUnlocked){
+    const attempt = prompt('Enter password to edit drivers/events:');
+    if (attempt === null) return;
+    if (attempt !== EDIT_PASSWORD){
+      alert('Incorrect password.');
+      return;
+    }
+    editsUnlocked = true;
+  }
   const el = document.getElementById(id);
   el.classList.toggle('open');
   btn.querySelector('span:last-child').textContent = el.classList.contains('open') ? '▴' : '▾';
@@ -817,6 +910,7 @@ function applyImport(){
     document.getElementById('importBox').classList.remove('show');
     document.getElementById('importApplyBtn').style.display = 'none';
     alert('Updated: ' + drivers.length + ' drivers, ' + events.length + ' events.');
+    saveTeamData();
   } catch(e){
     alert('Could not read that code — check it was pasted in full.');
   }
@@ -967,6 +1061,32 @@ function refreshAllSprocketDropdowns(ev){
   });
 }
 
+function populateChassisBrandSelect(sel, brands){
+  const prev = sel.value;
+  sel.innerHTML = '';
+  (brands && brands.length ? brands : ['KR1','KR2']).forEach(b=>{
+    const o = document.createElement('option');
+    o.value = b; o.textContent = b;
+    sel.appendChild(o);
+  });
+  if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+}
+function refreshAllChassisBrandDropdowns(ev){
+  document.querySelectorAll('.run-block').forEach(block=>{
+    const n = block.dataset.run;
+    const sel = document.getElementById(`chassisBrand_${n}`);
+    if (sel) populateChassisBrandSelect(sel, ev.chassisBrands);
+  });
+}
+
+function refreshHubVisibility(ev){
+  document.querySelectorAll('.run-block').forEach(block=>{
+    const n = block.dataset.run;
+    const wrap = document.getElementById(`hubWrap_${n}`);
+    if (wrap) wrap.style.display = ev.showHubs ? 'block' : 'none';
+  });
+}
+
 let currentEventSettings = defaultEventSettings();
 function applyEventSettings(ev){
   currentEventSettings = ev;
@@ -975,6 +1095,8 @@ function applyEventSettings(ev){
   populateHeatFirst(ev.heatLetters);
   refreshSessionOptions(ev);
   refreshAllSprocketDropdowns(ev);
+  refreshAllChassisBrandDropdowns(ev);
+  refreshHubVisibility(ev);
   refreshCustomFieldsInRuns();
   applyEventBackground(ev);
 }
@@ -982,7 +1104,9 @@ applyEventSettings(events[0]);
 
 // ---- pressure / rim temp formatting ----
 function formatPressure(v){
-  const f = parseFloat(v);
+  if (!v) return '';
+  const normalized = String(v).trim().replace(',', '.');
+  const f = parseFloat(normalized);
   if (isNaN(f)) return '';
   return f.toFixed(2);
 }
@@ -1000,7 +1124,10 @@ function runFieldsHTML(n){
     <div class="run-label" id="runLabel_${n}">Run ${n}<button class="rm" onclick="removeRun(${n})">✕ remove</button></div>
     <div class="field">
       <label><span class="ic">🏎️</span>Kart / Chassis</label>
-      <input id="kart_${n}" type="text" placeholder="KR1 E2502081" autocapitalize="characters">
+      <div class="row2">
+        <select id="chassisBrand_${n}"></select>
+        <input id="kart_${n}" type="text" placeholder="1111" autocapitalize="characters">
+      </div>
     </div>
     <div class="field">
       <label><span class="ic">⚙️</span>Sprocket (engine) / Axle (rear)</label>
@@ -1019,7 +1146,7 @@ function runFieldsHTML(n){
       </select>
       <input id="axleCustom_${n}" type="text" placeholder="Type axle type" style="margin-top:8px; display:none;">
     </div>
-    <div class="field">
+    <div class="field" id="hubWrap_${n}" style="display:none;">
       <label><span class="ic">🔘</span>Rear Hubs</label>
       <select id="hub_${n}">
         <option>Standard (Mag)</option>
@@ -1108,6 +1235,9 @@ function wireRunExtras(n){
   });
   const [min, max] = sprocketRangeFor(currentEventSettings);
   populateSprocketSelect(document.getElementById(`sprocket_${n}`), min, max);
+  populateChassisBrandSelect(document.getElementById(`chassisBrand_${n}`), currentEventSettings.chassisBrands);
+  const hubWrap = document.getElementById(`hubWrap_${n}`);
+  if (hubWrap) hubWrap.style.display = currentEventSettings.showHubs ? 'block' : 'none';
   populateCustomFields(n);
 }
 
@@ -1136,7 +1266,88 @@ function removeRun(n){
 
 wireRunExtras(1);
 
+function validateForm(){
+  let valid = true;
+  let firstInvalid = null;
+  function check(el, isBad){
+    if (!el) return;
+    if (isBad){
+      el.classList.add('field-invalid');
+      valid = false;
+      if (!firstInvalid) firstInvalid = el;
+    } else {
+      el.classList.remove('field-invalid');
+    }
+  }
+
+  if (eventSelect.value === '__other'){
+    const el = document.getElementById('manualEvent');
+    check(el, !el.value.trim());
+  }
+  if (driverSelect.value === '__other'){
+    const el = document.getElementById('manualName');
+    check(el, !el.value.trim());
+  }
+
+  document.querySelectorAll('.run-block').forEach(block=>{
+    const n = block.dataset.run;
+    check(document.getElementById(`kart_${n}`), !document.getElementById(`kart_${n}`).value.trim());
+    check(document.getElementById(`gearRear_${n}`), !document.getElementById(`gearRear_${n}`).value.trim());
+
+    const sprocketSel = document.getElementById(`sprocket_${n}`);
+    if (sprocketSel.value === '__custom'){
+      check(document.getElementById(`sprocketCustom_${n}`), !document.getElementById(`sprocketCustom_${n}`).value.trim());
+    }
+    const axleSel = document.getElementById(`axle_${n}`);
+    if (axleSel.value === '__custom'){
+      check(document.getElementById(`axleCustom_${n}`), !document.getElementById(`axleCustom_${n}`).value.trim());
+    }
+    if (currentEventSettings.showHubs){
+      const hubSel = document.getElementById(`hub_${n}`);
+      if (hubSel.value === '__custom'){
+        check(document.getElementById(`hubCustom_${n}`), !document.getElementById(`hubCustom_${n}`).value.trim());
+      }
+    }
+
+    const tyreGrid = block.querySelector('.tyre-grid');
+    const anyTyreChecked = ['tyre4new','tyre2newrad','tyre2neweng','tyreUsed']
+      .some(p=>document.getElementById(`${p}_${n}`).checked);
+    check(tyreGrid, !anyTyreChecked);
+    if (document.getElementById(`tyreUsed_${n}`).checked){
+      check(document.getElementById(`tyreAge_${n}`), !document.getElementById(`tyreAge_${n}`).value.trim());
+    }
+
+    check(document.getElementById(`pressCold_${n}`), !document.getElementById(`pressCold_${n}`).value.trim());
+    check(document.getElementById(`pressHot_${n}`), !document.getElementById(`pressHot_${n}`).value.trim());
+    check(document.getElementById(`rimTemp_${n}`), !document.getElementById(`rimTemp_${n}`).value.trim());
+    check(document.getElementById(`time_${n}`), !document.getElementById(`time_${n}`).value.trim());
+
+    currentEventSettings.customFields.forEach((f, idx)=>{
+      if (f.type === 'text'){
+        const el = document.getElementById(`customVal_${idx}_${n}`);
+        check(el, !!el && !el.value.trim());
+      }
+    });
+  });
+
+  if (!valid && firstInvalid){
+    firstInvalid.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  return valid;
+}
+
+// clear invalid highlight as soon as the person fixes a field
+document.addEventListener('change', function(e){
+  if (e.target.matches && e.target.matches('input, select, textarea')){
+    e.target.classList.remove('field-invalid');
+    const grid = e.target.closest('.tyre-grid');
+    if (grid) grid.classList.remove('field-invalid');
+  }
+});
+
 function generate(){
+  if (!validateForm()) return;
+
   const now = new Date();
   const dateStr = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 
@@ -1197,10 +1408,12 @@ function generate(){
 
   runBlocks.forEach(block=>{
     const n = block.dataset.run;
-    const kart = (document.getElementById(`kart_${n}`).value || '').trim() || '—';
+    const chassisBrand = document.getElementById(`chassisBrand_${n}`).value;
+    const chassisNum = (document.getElementById(`kart_${n}`).value || '').trim();
+    const kart = chassisNum ? `${chassisBrand} ${chassisNum}` : '—';
 
-    if (driverSelect.value !== '__other' && n === '1' && kart !== '—'){
-      chassisMemory[driverSelect.value] = kart;
+    if (driverSelect.value !== '__other' && n === '1' && chassisNum){
+      chassisMemory[driverSelect.value] = {brand: chassisBrand, num: chassisNum};
     }
 
     const sprocketSel = document.getElementById(`sprocket_${n}`);
@@ -1250,7 +1463,7 @@ function generate(){
     lines.push(`🏎️ ${kart}`);
     lines.push(`⚙️ ${gear}`);
     lines.push(`🔩 ${axle}`);
-    lines.push(`🔘 ${hub}`);
+    if (currentEventSettings.showHubs) lines.push(`🔘 ${hub}`);
     lines.push(`🛞 ${tyreStatus}`);
     lines.push(pressLine ? `🛞 ${pressLine}` : `🛞 —`);
     lines.push(rimTemp ? `🌡️ ${rimTemp}°C` : `🌡️ —`);
