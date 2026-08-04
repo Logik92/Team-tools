@@ -701,16 +701,33 @@ renderDefaultBgPreview();
 const EDIT_PASSWORD = 'Kr1kr2kr3!!';
 let editsUnlocked = false;
 
-// in-memory only — resets on page reload, cleared between mechanics' own sessions
+// persists on this phone only (localStorage), not shared via Firebase
 const chassisMemory = {};
 
 // remembers mechanical setup (sprocket/axle/hub) per chassis — not tyres, pressure,
 // rim temp, or time, since those genuinely change run to run and shouldn't auto-fill.
-// in-memory only, same as chassisMemory above — resets on reload.
+// persists on this phone only, same as chassisMemory above.
 const chassisSetupMemory = {};
 function chassisKey(brand, num){
   return `${brand || ''}__${(num || '').trim()}`.toLowerCase();
 }
+
+const CHASSIS_STORAGE_KEY = 'runreport_chassis_memory_v1';
+function saveChassisMemory(){
+  try{
+    localStorage.setItem(CHASSIS_STORAGE_KEY, JSON.stringify({chassisMemory, chassisSetupMemory}));
+  } catch(e){ /* storage unavailable — fails silently, app still works this session */ }
+}
+function loadChassisMemory(){
+  try{
+    const raw = localStorage.getItem(CHASSIS_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed.chassisMemory) Object.assign(chassisMemory, parsed.chassisMemory);
+    if (parsed.chassisSetupMemory) Object.assign(chassisSetupMemory, parsed.chassisSetupMemory);
+  } catch(e){ /* ignore corrupted/blocked storage */ }
+}
+loadChassisMemory();
 
 const driverSelect = document.getElementById('driverSelect');
 const manualDriverWrap = document.getElementById('manualDriverWrap');
@@ -1886,6 +1903,8 @@ function generate(){
     });
     if (currentEventSettings.showNotes && notes) lines.push(`📝 ${notes}`);
   });
+
+  saveChassisMemory();
 
   document.getElementById('output').textContent = lines.join('\n');
   document.getElementById('outputWrap').classList.add('show');
