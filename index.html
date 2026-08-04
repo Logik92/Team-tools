@@ -182,6 +182,12 @@
     color:var(--white); border-radius:6px; font-size:13px; font-weight:600;
     text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;
   }
+  .savebtn{
+    width:100%; padding:13px; background:var(--green); color:#0a1a12;
+    border:none; border-radius:6px; font-size:13px; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; margin-top:12px;
+  }
+  .savebtn:active{ opacity:0.8; }
   textarea{
     width:100%; min-height:80px; background:#0e1114; border:1px solid var(--line);
     color:var(--white); padding:10px; border-radius:6px; font-size:13px;
@@ -453,6 +459,7 @@
       <button class="addbtn" onclick="addEvent()">+</button>
     </div>
     <div class="note">Tap ⚙ on an event to set how many Free Practice sessions/heat groups it has, which sessions apply (Prefinal, Superheat, Repechage), and which sprocket range (OKJ / KZ) to offer.</div>
+    <button class="savebtn" id="eventSaveBtn" onclick="confirmSave('eventSaveBtn', '💾 Save event changes')">💾 Save event changes</button>
   </div>
 
   <hr class="divider">
@@ -504,6 +511,7 @@
       <button class="syncbtn" id="importApplyBtn" style="display:none; width:100%; margin-top:8px;" onclick="applyImport()">Apply</button>
       <div class="note">Covers drivers and events (with their settings) together. When someone updates either list, tap Export and post that code in the WhatsApp group. Everyone else pastes it into Import so every phone matches.</div>
     </div>
+    <button class="savebtn" id="driverSaveBtn" onclick="confirmSave('driverSaveBtn', '💾 Save driver changes')">💾 Save driver changes</button>
   </div>
 
   <div class="hint">Chassis numbers are remembered per driver for this session — pick the driver again and it auto-fills. Export the roster occasionally to back it up, since it resets if the page is closed.</div>
@@ -558,6 +566,14 @@ function saveTeamData(){
     localStorage.setItem(STORAGE_KEY, JSON.stringify({drivers, events}));
   } catch(e){ /* storage unavailable — fails silently, app still works this session */ }
   syncToFirebase();
+}
+
+function confirmSave(btnId, label){
+  saveTeamData();
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.textContent = 'Saved ✓';
+  setTimeout(()=>{ btn.textContent = label; }, 1600);
 }
 function loadTeamData(){
   try{
@@ -620,7 +636,6 @@ function handleFirebaseUpdate(data){
   if (Array.isArray(data.events) && data.events.length) events = data.events;
   if (typeof data.defaultBgImage === 'string' && data.defaultBgImage) defaultBgImage = data.defaultBgImage;
   renderDriverList();
-  renderDriverSelect();
   renderEventList();
   renderEventSelect();
   renderDefaultBgPreview();
@@ -692,10 +707,12 @@ const chassisMemory = {};
 const driverSelect = document.getElementById('driverSelect');
 const manualDriverWrap = document.getElementById('manualDriverWrap');
 
-function renderDriverSelect(){
+function renderDriverSelect(ev){
+  const filterEv = ev || null;
   const prev = driverSelect.value;
   driverSelect.innerHTML = '';
-  drivers.forEach(d=>{
+  const filtered = filterEv ? drivers.filter(d=>isDriverAllowed(filterEv, d.name)) : drivers;
+  filtered.forEach(d=>{
     const opt = document.createElement('option');
     opt.value = d.name;
     opt.textContent = `${d.flag} ${d.name}`;
@@ -705,7 +722,12 @@ function renderDriverSelect(){
   other.value = '__other';
   other.textContent = '🏁 Other / Guest';
   driverSelect.appendChild(other);
-  if ([...driverSelect.options].some(o=>o.value===prev)) driverSelect.value = prev;
+  if ([...driverSelect.options].some(o=>o.value===prev)){
+    driverSelect.value = prev;
+  } else if (filtered.length){
+    driverSelect.value = filtered[0].name;
+    driverSelect.dispatchEvent(new Event('change'));
+  }
 }
 
 function renderDriverList(){
@@ -727,16 +749,14 @@ function addDriver(){
   drivers.push({name, flag});
   nameInput.value = '';
   renderDriverList();
-  renderDriverSelect();
-  filterDriverSelect(currentEventSettings);
+  renderDriverSelect(currentEventSettings);
   saveTeamData();
 }
 
 function removeDriver(i){
   drivers.splice(i,1);
   renderDriverList();
-  renderDriverSelect();
-  filterDriverSelect(currentEventSettings);
+  renderDriverSelect(currentEventSettings);
   saveTeamData();
 }
 
@@ -1163,7 +1183,6 @@ function applyImport(){
     events = parsed.events;
     openEventSettingsIndex = null;
     renderDriverList();
-    renderDriverSelect();
     renderEventList();
     renderEventSelect();
     const ev = events.find(e=>e.name === eventSelect.value) || events[0];
@@ -1391,22 +1410,6 @@ function refreshFieldVisibility(ev){
 }
 
 let currentEventSettings = defaultEventSettings();
-function filterDriverSelect(ev){
-  const prevVal = driverSelect.value;
-  let firstVisible = null;
-  [...driverSelect.options].forEach(opt=>{
-    if (opt.value === '__other'){ opt.hidden = false; return; }
-    const allowed = isDriverAllowed(ev, opt.value);
-    opt.hidden = !allowed;
-    if (allowed && !firstVisible) firstVisible = opt.value;
-  });
-  const currentOpt = [...driverSelect.options].find(o=>o.value===prevVal);
-  if (currentOpt && currentOpt.hidden && firstVisible){
-    driverSelect.value = firstVisible;
-    driverSelect.dispatchEvent(new Event('change'));
-  }
-}
-
 function applyEventSettings(ev){
   currentEventSettings = ev;
   populateFpNum(ev.fp || 1);
@@ -1420,7 +1423,7 @@ function applyEventSettings(ev){
   refreshFieldVisibility(ev);
   refreshCustomFieldsInRuns();
   applyEventBackground(ev);
-  filterDriverSelect(ev);
+  renderDriverSelect(ev);
 }
 applyEventSettings(events[0]);
 
