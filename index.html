@@ -704,6 +704,14 @@ let editsUnlocked = false;
 // in-memory only — resets on page reload, cleared between mechanics' own sessions
 const chassisMemory = {};
 
+// remembers mechanical setup (sprocket/axle/hub) per chassis — not tyres, pressure,
+// rim temp, or time, since those genuinely change run to run and shouldn't auto-fill.
+// in-memory only, same as chassisMemory above — resets on reload.
+const chassisSetupMemory = {};
+function chassisKey(brand, num){
+  return `${brand || ''}__${(num || '').trim()}`.toLowerCase();
+}
+
 const driverSelect = document.getElementById('driverSelect');
 const manualDriverWrap = document.getElementById('manualDriverWrap');
 
@@ -1127,6 +1135,7 @@ driverSelect.addEventListener('change', function(){
       document.getElementById('kart_1').value = mem.num;
       const brandSel = document.getElementById('chassisBrand_1');
       if ([...brandSel.options].some(o=>o.value===mem.brand)) brandSel.value = mem.brand;
+      applyChassisMemory('1');
     }
   }
 });
@@ -1540,6 +1549,48 @@ function refreshCustomFieldsInRuns(){
   });
 }
 
+function applyChassisMemory(n){
+  const brand = document.getElementById(`chassisBrand_${n}`).value;
+  const num = (document.getElementById(`kart_${n}`).value || '').trim();
+  if (!num) return;
+  const setup = chassisSetupMemory[chassisKey(brand, num)];
+  if (!setup) return;
+
+  const sprocketSel = document.getElementById(`sprocket_${n}`);
+  const sprocketCustom = document.getElementById(`sprocketCustom_${n}`);
+  if (setup.sprocket === '__custom'){
+    sprocketSel.value = '__custom';
+    sprocketCustom.value = setup.sprocketCustom || '';
+    sprocketCustom.style.display = 'block';
+  } else if ([...sprocketSel.options].some(o=>o.value===setup.sprocket)){
+    sprocketSel.value = setup.sprocket;
+    sprocketCustom.style.display = 'none';
+  }
+  if (setup.gearRear) document.getElementById(`gearRear_${n}`).value = setup.gearRear;
+
+  const axleSel = document.getElementById(`axle_${n}`);
+  const axleCustom = document.getElementById(`axleCustom_${n}`);
+  if (setup.axle === '__custom'){
+    axleSel.value = '__custom';
+    axleCustom.value = setup.axleCustom || '';
+    axleCustom.style.display = 'block';
+  } else if (setup.axle){
+    axleSel.value = setup.axle;
+    axleCustom.style.display = 'none';
+  }
+
+  const hubSel = document.getElementById(`hub_${n}`);
+  const hubCustom = document.getElementById(`hubCustom_${n}`);
+  if (setup.hub === '__custom'){
+    hubSel.value = '__custom';
+    hubCustom.value = setup.hubCustom || '';
+    hubCustom.style.display = 'block';
+  } else if (setup.hub){
+    hubSel.value = setup.hub;
+    hubCustom.style.display = 'none';
+  }
+}
+
 function wireRunExtras(n){
   const boxIds = [`tyre4new_${n}`, `tyre2newrad_${n}`, `tyre2neweng_${n}`, `tyreUsed_${n}`];
   const boxes = boxIds.map(id=>document.getElementById(id));
@@ -1561,6 +1612,8 @@ function wireRunExtras(n){
   document.getElementById(`hub_${n}`).addEventListener('change', function(){
     document.getElementById(`hubCustom_${n}`).style.display = this.value === '__custom' ? 'block' : 'none';
   });
+  document.getElementById(`kart_${n}`).addEventListener('change', function(){ applyChassisMemory(n); });
+  document.getElementById(`chassisBrand_${n}`).addEventListener('change', function(){ applyChassisMemory(n); });
   const [min, max] = sprocketRangeFor(currentEventSettings);
   populateSprocketSelect(document.getElementById(`sprocket_${n}`), min, max, currentEventSettings.sprocketDefault);
   populateChassisBrandSelect(document.getElementById(`chassisBrand_${n}`), currentEventSettings.chassisBrands);
@@ -1775,6 +1828,21 @@ function generate(){
     const hub = hubSel.value === '__custom'
       ? (document.getElementById(`hubCustom_${n}`).value.trim() || '—')
       : hubSel.value;
+
+    if (chassisNum){
+      chassisSetupMemory[chassisKey(chassisBrand, chassisNum)] = {
+        sprocket: sprocketSel.value,
+        sprocketCustom: sprocketSel.value === '__custom'
+          ? document.getElementById(`sprocketCustom_${n}`).value.trim() : '',
+        gearRear: gr,
+        axle: axleSel.value,
+        axleCustom: axleSel.value === '__custom'
+          ? document.getElementById(`axleCustom_${n}`).value.trim() : '',
+        hub: hubSel.value,
+        hubCustom: hubSel.value === '__custom'
+          ? document.getElementById(`hubCustom_${n}`).value.trim() : ''
+      };
+    }
 
     let tyreStatus = '—';
     if (document.getElementById(`tyre4new_${n}`).checked){
