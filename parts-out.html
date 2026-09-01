@@ -558,6 +558,8 @@ const I18N = {
     'modal.noDrivers': 'No drivers in the master list yet. Add some in Admin \u2192 Drivers first.',
     'general.storageWarning': 'Warning: not connected to the shared database \u2014 changes may not be saved or synced.',
     'general.sizeWarning': 'Shared data is close to the 1MB cloud limit \u2014 consider removing old closed events or logos.',
+    'general.saveFailed': 'Save failed \u2014 this change was NOT saved to the shared database{reason}. Check your connection or ask an admin to check Firebase permissions.',
+    'general.permissionDenied': 'Cannot reach the shared database (permission denied) \u2014 working offline with empty data. Ask an admin to check the Firestore security rules.',
   },
   it: {
     'login.sub': 'Seleziona il tuo nome e inserisci la password.',
@@ -700,6 +702,8 @@ const I18N = {
     'modal.noDrivers': 'Nessun pilota nell\u2019elenco principale. Aggiungine alcuni in Admin \u2192 Piloti.',
     'general.storageWarning': 'Attenzione: non connesso al database condiviso \u2014 le modifiche potrebbero non essere salvate o sincronizzate.',
     'general.sizeWarning': 'I dati condivisi si avvicinano al limite cloud di 1MB \u2014 valuta di rimuovere eventi chiusi vecchi o loghi.',
+    'general.saveFailed': 'Salvataggio fallito \u2014 questa modifica NON \u00e8 stata salvata nel database condiviso{reason}. Controlla la connessione o chiedi a un admin di verificare i permessi Firebase.',
+    'general.permissionDenied': 'Impossibile raggiungere il database condiviso (permesso negato) \u2014 si sta lavorando offline con dati vuoti. Chiedi a un admin di controllare le regole di sicurezza di Firestore.',
   }
 };
 function t(key, vars){
@@ -777,8 +781,15 @@ async function saveDb(){
       showToast(t('general.sizeWarning'), true);
     }
     if(window.__saveToFirebase){
-      window.__saveToFirebase(db);
-      storageOk = true;
+      const result = await window.__saveToFirebase(db);
+      if(result && result.ok){
+        storageOk = true;
+      } else {
+        storageOk = false;
+        const reason = result && result.code ? ` (${result.code})` : '';
+        console.error('Firebase write failed' + reason, result);
+        showToast(t('general.saveFailed', {reason}), true);
+      }
     } else {
       storageOk = false;
       console.error('Firebase bridge not ready \u2014 changes are not being saved.');
@@ -786,6 +797,7 @@ async function saveDb(){
   }catch(e){
     storageOk = false;
     console.error('firebase save failed', e);
+    showToast(t('general.saveFailed', {reason:''}), true);
   }
 }
 
@@ -1681,10 +1693,11 @@ async function bootWithDb(cloudData){
     await saveDb(); // seed the cloud doc so it exists for next time / other devices
   }
   if(!storageOk){
-    showToast(t('general.storageWarning'), true);
+    showToast(permissionDenied ? t('general.permissionDenied') : t('general.storageWarning'), true);
   }
   renderStaffGrid();
 }
+let permissionDenied = false;
 window.__onFirebaseReady = function(){
   firebaseReady = true;
   window.__subscribeFirebase((cloudData)=>{
@@ -1698,6 +1711,10 @@ window.__onFirebaseReady = function(){
       if(document.getElementById('view-home').classList.contains('active')){ renderEventBar(); }
       if(document.getElementById('view-admin').classList.contains('active')){ renderAdmin(); }
     }
+  }, (err)=>{
+    // read denied/failed outright \u2014 don't wait the full timeout, boot in-memory now
+    if(err && err.code === 'permission-denied') permissionDenied = true;
+    if(!dbBooted){ storageOk = false; bootWithDb(null); }
   });
 };
 // Fallback: if Firebase hasn't connected within a few seconds (offline, blocked, etc.),
@@ -1731,16 +1748,20 @@ setTimeout(()=>{
   const partsOutDocRef = doc(db, "partsOutData", "main");
 
   window.__saveToFirebase = function(data){
-    setDoc(partsOutDocRef, data).catch(err=>{
+    return setDoc(partsOutDocRef, data).then(()=>{
+      return {ok:true};
+    }).catch(err=>{
       console.error("Firebase save failed:", err);
+      return {ok:false, code: err && err.code, message: err && err.message};
     });
   };
 
-  window.__subscribeFirebase = function(callback){
+  window.__subscribeFirebase = function(callback, onError){
     onSnapshot(partsOutDocRef, (snap)=>{
       callback(snap.exists() ? snap.data() : null);
     }, (err)=>{
       console.error("Firebase listener error:", err);
+      if(onError) onError(err);
     });
   };
 
