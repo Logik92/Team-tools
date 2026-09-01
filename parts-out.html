@@ -76,7 +76,7 @@
   #loginError{color:var(--danger);font-size:12.5px;min-height:16px;margin-top:6px;}
 
   /* ---------- HOME ---------- */
-  #view-home{padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));overflow-y:auto;overflow-x:hidden;}
+  #view-home, #view-picker{padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));overflow-y:auto;overflow-x:hidden;}
   .home-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
   .home-brand{display:flex;align-items:center;gap:10px;}
   .brand-mark{width:38px;height:37px;display:block;transform:rotate(90deg);}
@@ -293,19 +293,27 @@
           <rect x="9" y="30" width="46" height="11" rx="5.5" fill="none" stroke="#1a1d1f" stroke-width="1.5" opacity="0.4"/>
         </svg></div>
         <div class="label" data-i18n="home.driverLabel">Driver</div>
-        <div class="sub" data-i18n="home.driverSub">Log parts to a racing driver &middot; no pricing</div>
       </div>
       <div class="mode-tile customer" id="tileCustomer">
         <div class="icon">&#128100;</div>
         <div class="label" data-i18n="home.clientLabel">Client</div>
-        <div class="sub" data-i18n="home.clientSub">Log &amp; price parts for a client</div>
       </div>
     </div>
     <div class="guest-row">
-      <button class="btn ghost" id="guestBtn">&#128064;&nbsp; <span data-i18n="home.guestBtn">Guest checkout &mdash; someone walking up</span></button>
+      <button class="btn ghost" id="guestBtn">&#128269;&nbsp; <span data-i18n="home.guestBtn">Parts Browser</span></button>
     </div>
 
-    <div id="pickerArea"></div>
+  </div>
+
+  <!-- ===== PICKER (Driver / Client full-screen selection) ===== -->
+  <div class="view" id="view-picker">
+    <div class="home-topbar">
+      <div class="home-brand">
+        <button class="back-btn" id="pickerBackBtn">&larr; <span data-i18n="catalog.home">Home</span></button>
+        <div class="brand-text" id="pickerTitle" style="margin-left:6px;"></div>
+      </div>
+    </div>
+    <div id="pickerContent"></div>
   </div>
 
   <!-- ===== CATALOG ===== -->
@@ -314,7 +322,6 @@
       <button class="back-btn" id="catBackBtn">&larr; <span data-i18n="catalog.home">Home</span></button>
       <div class="recipient-info">
         <div class="recipient-tag" id="recipientTag">&mdash;</div>
-        <div class="recipient-sub" id="recipientSub"></div>
       </div>
       <div class="lang-toggle" id="langToggle">
         <button data-lang="en">EN</button>
@@ -369,10 +376,11 @@
     </div>
     <div class="inline-form">
       <div class="field"><label class="f-label" data-i18n="common.name">Name</label><input type="text" id="newCustName" placeholder="Client name" data-i18n-placeholder="admin.clients.namePlaceholder"></div>
+      <div class="field"><label class="f-label" data-i18n="common.shortName">Short name</label><input type="text" id="newCustShortName" placeholder="For buttons" data-i18n-placeholder="admin.clients.shortNamePlaceholder" style="width:120px;"></div>
       <button class="btn" id="addCustomerBtn" data-i18n="admin.clients.addBtn">Add client</button>
     </div>
     <div style="overflow-x:auto;">
-    <table class="data-table"><thead><tr><th data-i18n="admin.clients.thLogo">Logo</th><th data-i18n="common.name">Name</th><th data-i18n="common.email">Email</th><th data-i18n="common.address">Address</th><th></th></tr></thead><tbody id="customerTableBody"></tbody></table>
+    <table class="data-table"><thead><tr><th data-i18n="admin.clients.thLogo">Logo</th><th data-i18n="common.name">Name</th><th data-i18n="common.shortName">Short name</th><th data-i18n="common.email">Email</th><th data-i18n="common.address">Address</th><th></th></tr></thead><tbody id="customerTableBody"></tbody></table>
     </div>
   </div>
 
@@ -499,18 +507,13 @@ const I18N = {
     'home.driverSub': 'Log parts to a racing driver \u00b7 no pricing',
     'home.clientLabel': 'Client',
     'home.clientSub': 'Log & price parts for a client',
-    'home.guestBtn': 'Guest checkout \u2014 someone walking up',
+    'home.guestBtn': 'Parts Browser',
     'home.driverNoEvent': 'No active event \u2014 ask an admin to open one.',
-    'home.selectRacingDriver': 'Select racing driver \u2014 ',
     'home.noDriversInEvent': 'No drivers were added to this event. Ask an admin to edit the event.',
     'home.selectClient': 'Select client',
     'home.searchClients': 'Search clients\u2026',
     'home.noClientsMatch': 'No clients match.',
-    'home.guestPrompt': 'Guest name or note (optional):',
-    'home.guestWord': 'Guest',
     'catalog.home': 'Home',
-    'catalog.driverSub': 'Driver \u00b7 usage log, no pricing',
-    'catalog.clientSub': 'Client \u00b7 full price, no discount',
     'catalog.searchPlaceholder': 'Search part name or code\u2026',
     'catalog.noMatch': 'No parts match',
     'catalog.noneSelected': 'No parts selected',
@@ -536,6 +539,7 @@ const I18N = {
     'common.category': 'Category',
     'common.email': 'Email',
     'common.address': 'Address',
+    'common.shortName': 'Short name',
     'common.nationality': 'Nationality',
     'common.password': 'Password',
     'common.role': 'Role',
@@ -550,6 +554,8 @@ const I18N = {
     'common.remove': 'Remove',
     'common.close': 'Close',
     'admin.clients.namePlaceholder': 'Client name',
+    'admin.clients.shortNamePlaceholder': 'For buttons',
+    'admin.clients.shortNamePrompt': 'Short name (shown on buttons, optional):',
     'admin.clients.addBtn': 'Add client',
     'admin.clients.thLogo': 'Logo',
     'admin.clients.logoBtn': 'Logo',
@@ -647,18 +653,13 @@ const I18N = {
     'home.driverSub': 'Registra i ricambi per un pilota \u00b7 nessun prezzo',
     'home.clientLabel': 'Cliente',
     'home.clientSub': 'Registra e applica il prezzo per un cliente',
-    'home.guestBtn': 'Vendita occasionale \u2014 qualcuno si presenta',
+    'home.guestBtn': 'Sfoglia ricambi',
     'home.driverNoEvent': 'Nessun evento attivo \u2014 chiedi a un admin di aprirne uno.',
-    'home.selectRacingDriver': 'Seleziona il pilota in gara \u2014 ',
     'home.noDriversInEvent': 'Nessun pilota \u00e8 stato aggiunto a questo evento. Chiedi a un admin di modificare l\u2019evento.',
     'home.selectClient': 'Seleziona cliente',
     'home.searchClients': 'Cerca clienti\u2026',
     'home.noClientsMatch': 'Nessun cliente corrisponde.',
-    'home.guestPrompt': 'Nome o nota ospite (opzionale):',
-    'home.guestWord': 'Ospite',
     'catalog.home': 'Home',
-    'catalog.driverSub': 'Pilota \u00b7 registro utilizzo, nessun prezzo',
-    'catalog.clientSub': 'Cliente \u00b7 prezzo pieno, nessuno sconto',
     'catalog.searchPlaceholder': 'Cerca nome ricambio o codice\u2026',
     'catalog.noMatch': 'Nessun ricambio corrisponde a',
     'catalog.noneSelected': 'Nessun ricambio selezionato',
@@ -684,6 +685,7 @@ const I18N = {
     'common.category': 'Categoria',
     'common.email': 'Email',
     'common.address': 'Indirizzo',
+    'common.shortName': 'Nome breve',
     'common.nationality': 'Nazionalit\u00e0',
     'common.password': 'Password',
     'common.role': 'Ruolo',
@@ -698,6 +700,8 @@ const I18N = {
     'common.remove': 'Rimuovi',
     'common.close': 'Chiudi',
     'admin.clients.namePlaceholder': 'Nome cliente',
+    'admin.clients.shortNamePlaceholder': 'Per i pulsanti',
+    'admin.clients.shortNamePrompt': 'Nome breve (mostrato sui pulsanti, opzionale):',
     'admin.clients.addBtn': 'Aggiungi cliente',
     'admin.clients.thLogo': 'Logo',
     'admin.clients.logoBtn': 'Logo',
@@ -805,9 +809,6 @@ function setUiLang(lang){
   uiLang = lang;
   applyI18n();
   renderChips(); renderGrid(); renderConfirmBar();
-  if(cat.recipient){
-    document.getElementById('recipientSub').textContent = cat.recipient.type==='driver' ? t('catalog.driverSub') : t('catalog.clientSub');
-  }
   if(document.getElementById('view-home').classList.contains('active')){ renderEventBar(); renderPickerArea(null); }
   // view-admin (the menu) has no live data of its own to refresh \u2014 its labels are handled by applyI18n() above.
   // Sub-views (Clients/Drivers/etc.) don't show the language toggle, so they can't be active while this runs.
@@ -1192,21 +1193,22 @@ document.getElementById('tileDriver').onclick = ()=>{
 };
 document.getElementById('tileCustomer').onclick = ()=> renderPickerArea('customer');
 document.getElementById('guestBtn').onclick = ()=>{
-  const name = prompt(t('home.guestPrompt'), '');
-  if(name===null) return;
-  openCatalog({type:'customer', id:'guest', name: name.trim() ? `${t('home.guestWord')} \u2014 ${name.trim()}` : t('home.guestWord')});
+  openCatalog({type:'browser', id:'browser', name: t('home.guestBtn')});
 };
 
 function renderPickerArea(mode){
-  const area = document.getElementById('pickerArea');
-  if(!mode){ area.innerHTML=''; return; }
+  if(!mode) return; // called defensively from Home/event-chip code; nothing to clear now that this is its own view
+  const area = document.getElementById('pickerContent');
+  const titleEl = document.getElementById('pickerTitle');
+  area.innerHTML = '';
   if(mode==='driver'){
     const ev = currentEvent();
-    area.innerHTML = `<div class="section-title">${t('home.selectRacingDriver')}${escapeHtml(ev.label)}</div>`;
+    titleEl.textContent = ev.label;
     const grid = document.createElement('div');
     grid.className = 'picker-grid';
     if(ev.driverIds.length===0){
-      area.innerHTML += `<div class="empty-note">${t('home.noDriversInEvent')}</div>`;
+      area.innerHTML = `<div class="empty-note">${t('home.noDriversInEvent')}</div>`;
+      switchView('view-picker');
       return;
     }
     ev.driverIds.forEach(did=>{
@@ -1220,20 +1222,20 @@ function renderPickerArea(mode){
     });
     area.appendChild(grid);
   } else {
-    area.innerHTML = `<div class="section-title">${t('home.selectClient')}</div>
-      <input type="text" id="custSearch" placeholder="${t('home.searchClients')}" style="width:100%;margin-bottom:10px;">`;
+    titleEl.textContent = t('home.selectClient');
+    area.innerHTML = `<input type="text" id="custSearch" placeholder="${t('home.searchClients')}" style="width:100%;margin:14px 0 10px;">`;
     const grid = document.createElement('div');
     grid.className = 'picker-grid';
     grid.id = 'custGrid';
     area.appendChild(grid);
     function draw(q){
       grid.innerHTML = '';
-      const list = db.customers.filter(c=> !q || c.name.toLowerCase().includes(q.toLowerCase()));
+      const list = db.customers.filter(c=> !q || c.name.toLowerCase().includes(q.toLowerCase()) || (c.shortName||'').toLowerCase().includes(q.toLowerCase()));
       if(list.length===0){ grid.innerHTML = `<div class="empty-note">${t('home.noClientsMatch')}</div>`; return; }
       list.forEach(c=>{
         const tile = document.createElement('div');
         tile.className = 'picker-tile';
-        tile.innerHTML = `${c.logo ? `<img class="logo-thumb" src="${c.logo}">` : ''}${escapeHtml(c.name)}`;
+        tile.innerHTML = `${c.logo ? `<img class="logo-thumb" src="${c.logo}">` : ''}${escapeHtml(c.shortName || c.name)}`;
         tile.onclick = ()=> openCatalog({type:'customer', id:c.id, name:c.name});
         grid.appendChild(tile);
       });
@@ -1241,7 +1243,9 @@ function renderPickerArea(mode){
     draw('');
     document.getElementById('custSearch').addEventListener('input', e=>draw(e.target.value));
   }
+  switchView('view-picker');
 }
+document.getElementById('pickerBackBtn').onclick = ()=> switchView('view-home');
 
 /* ================= CATALOG ================= */
 function openCatalog(recipient){
@@ -1252,7 +1256,6 @@ function openCatalog(recipient){
   cat.catFilter = 'all';
   document.getElementById('searchInput').value = '';
   document.getElementById('recipientTag').textContent = recipient.name;
-  document.getElementById('recipientSub').textContent = recipient.type==='driver' ? t('catalog.driverSub') : t('catalog.clientSub');
   renderChips();
   renderGrid();
   renderConfirmBar();
@@ -1285,7 +1288,7 @@ function matchesSearch(p, q){
          (p.c && p.c.toLowerCase().includes(q));
 }
 function customerPrice(p){
-  if(cat.recipient.type!=='customer') return null;
+  if(cat.recipient.type!=='customer' && cat.recipient.type!=='browser') return null;
   // no discounts here \u2014 clients are always charged the full listed price;
   // the office applies any discount during invoicing.
   return +(p.price || 0).toFixed(2);
@@ -1300,14 +1303,16 @@ function renderGrid(){
     return;
   }
   const isCust = cat.recipient.type==='customer';
+  const isBrowser = cat.recipient.type==='browser';
+  const showPrice = isCust || isBrowser;
   const frag = document.createDocumentFragment();
   items.forEach(p=>{
     const card = document.createElement('div');
-    const qty = cat.cart[p.id] || 0;
+    const qty = isBrowser ? 0 : (cat.cart[p.id] || 0);
     card.className = 'card' + (qty>0 ? ' selected' : '');
     const c = catNameById[p.cat];
     let priceHtml = '';
-    if(isCust){
+    if(showPrice){
       const cp = customerPrice(p);
       priceHtml = cat.priceRevealed
         ? `<div class="card-price">&euro;${cp.toFixed(2)}</div>`
@@ -1323,10 +1328,14 @@ function renderGrid(){
       </div>
       ${qty>0 ? `<div class="qty-minus">&minus;</div><div class="qty-badge">${qty}</div>` : ''}
     `;
-    card.onclick = ()=> addToCart(p.id);
-    const minus = card.querySelector('.qty-minus');
-    if(minus){
-      minus.onclick = (e)=>{ e.stopPropagation(); changeQty(p.id, -1); };
+    if(!isBrowser){
+      card.onclick = ()=> addToCart(p.id);
+      const minus = card.querySelector('.qty-minus');
+      if(minus){
+        minus.onclick = (e)=>{ e.stopPropagation(); changeQty(p.id, -1); };
+      }
+    } else {
+      card.style.cursor = 'default';
     }
     frag.appendChild(card);
   });
@@ -1345,13 +1354,22 @@ function changeQty(id, delta){
 function renderConfirmBar(){
   const ids = Object.keys(cat.cart);
   const isCust = cat.recipient.type==='customer';
+  const isBrowser = cat.recipient.type==='browser';
   const info = document.getElementById('confirmInfo');
   const confirmBtn = document.getElementById('confirmBtn');
   const priceBtn = document.getElementById('priceToggleBtn');
 
-  priceBtn.style.display = isCust ? '' : 'none';
+  priceBtn.style.display = (isCust || isBrowser) ? '' : 'none';
   priceBtn.classList.toggle('revealed', cat.priceRevealed);
   priceBtn.innerHTML = cat.priceRevealed ? '&#128275;' : '&#128274;';
+
+  if(isBrowser){
+    // pure lookup mode \u2014 nothing to select or confirm, nothing gets logged
+    info.innerHTML = '';
+    confirmBtn.style.display = 'none';
+    return;
+  }
+  confirmBtn.style.display = '';
 
   if(ids.length===0){
     info.innerHTML = t('catalog.noneSelected');
@@ -1469,13 +1487,14 @@ function renderCustomerTable(){
   body.innerHTML = '';
   db.customers.forEach(c=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${c.logo ? `<img class="logo-thumb" src="${c.logo}">` : ''}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.email||'')}</td><td>${escapeHtml(c.address||'')}</td>
+    tr.innerHTML = `<td>${c.logo ? `<img class="logo-thumb" src="${c.logo}">` : ''}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(c.shortName||'')}</td><td>${escapeHtml(c.email||'')}</td><td>${escapeHtml(c.address||'')}</td>
       <td class="row-actions"><button data-act="logo">${t('admin.clients.logoBtn')}</button><button data-act="edit">${t('common.edit')}</button><button data-act="del" class="danger">${t('common.remove')}</button></td>`;
     tr.querySelector('[data-act="edit"]').onclick = async ()=>{
       const name = prompt(t('admin.clients.editPrompt'), c.name); if(name===null || !name.trim()) return;
+      const shortName = prompt(t('admin.clients.shortNamePrompt'), c.shortName||''); if(shortName===null) return;
       const email = prompt(t('admin.clients.emailPrompt'), c.email||''); if(email===null) return;
       const address = prompt(t('admin.clients.addressPrompt'), c.address||''); if(address===null) return;
-      c.name = name.trim(); c.email = email.trim(); c.address = address.trim();
+      c.name = name.trim(); c.shortName = shortName.trim(); c.email = email.trim(); c.address = address.trim();
       await saveDb(); renderCustomerTable();
     };
     tr.querySelector('[data-act="logo"]').onclick = ()=>{
@@ -1499,9 +1518,11 @@ function renderCustomerTable(){
 }
 document.getElementById('addCustomerBtn').onclick = async ()=>{
   const name = document.getElementById('newCustName').value.trim();
+  const shortName = document.getElementById('newCustShortName').value.trim();
   if(!name) return;
-  db.customers.push({id:'c'+Date.now(), name, email:'', address:''});
+  db.customers.push({id:'c'+Date.now(), name, shortName, email:'', address:''});
   document.getElementById('newCustName').value='';
+  document.getElementById('newCustShortName').value='';
   await saveDb(); renderCustomerTable();
 };
 
