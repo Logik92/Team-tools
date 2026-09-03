@@ -249,6 +249,54 @@
     gap:6px; margin-top:6px; padding-right:4px;
   }
   .es-driver-list .tyre-opt{ padding:8px 10px; font-size:12.5px; }
+
+  .tabbar{
+    display:flex; gap:8px; margin-bottom:18px;
+  }
+  .tabbtn{
+    flex:1; padding:11px 8px; background:var(--panel); border:1px solid var(--line);
+    color:var(--grey); border-radius:6px; font-size:12px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;
+  }
+  .tabbtn.active{
+    background:var(--amber); color:#1a1400; border-color:var(--amber);
+  }
+
+  .cat-tabbar{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .cat-tabbtn{
+    padding:9px 16px; background:var(--panel); border:1px solid var(--line);
+    color:var(--grey); border-radius:20px; font-size:12.5px; font-weight:700;
+    cursor:pointer;
+  }
+  .cat-tabbtn.active{ background:var(--amber); color:#1a1400; border-color:var(--amber); }
+
+  .comp-filter-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .comp-filter-row input{ flex:2; }
+  .comp-filter-row select{ flex:1; width:auto; padding-right:26px; }
+
+  .comp-summary{
+    font-size:12px; color:var(--grey); text-align:center; margin-bottom:10px;
+  }
+
+  .comp-row{
+    display:flex; align-items:center; gap:10px;
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:10px 12px; margin-bottom:6px;
+  }
+  .comp-row.flagged{ border-color:var(--amber); background:rgba(255,179,26,0.08); }
+  .comp-num{
+    font-size:15px; font-weight:700; color:var(--amber);
+    min-width:38px; text-align:center; flex-shrink:0;
+  }
+  .comp-info{ flex:1; min-width:0; }
+  .comp-name{ font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .comp-team{ font-size:11px; color:var(--grey); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .comp-group-input{
+    width:44px; flex-shrink:0; padding:7px 4px; font-size:12px; text-align:center;
+  }
+  .comp-tick{
+    width:26px; height:26px; flex-shrink:0; accent-color:var(--amber);
+  }
   .field-invalid{
     border-color:var(--red) !important;
     box-shadow:0 0 0 1px var(--red);
@@ -261,6 +309,12 @@
 <body>
 <div id="bgLayer"></div>
 <div class="board">
+  <div class="tabbar">
+    <button class="tabbtn active" id="tabBtn_report" onclick="switchTab('report')">📋 Run Report</button>
+    <button class="tabbtn" id="tabBtn_competitors" onclick="switchTab('competitors')">🏎️ Competitor Tyres</button>
+  </div>
+
+  <div id="tabRunReport">
   <div class="header">
     <h1>Run Report</h1>
     <span id="clock"></span>
@@ -524,6 +578,37 @@
   </div>
 
   <div class="hint">Chassis numbers are remembered per driver for this session — pick the driver again and it auto-fills. Export the roster occasionally to back it up, since it resets if the page is closed.</div>
+  </div>
+
+  <div id="tabCompetitors" style="display:none;">
+    <div class="cat-tabbar" id="categoryTabbar"></div>
+
+    <div class="comp-filter-row">
+      <input type="text" id="compSearch" placeholder="Search number or name…" oninput="renderCompetitorList()">
+      <select id="compGroupFilter" onchange="renderCompetitorList()">
+        <option value="">All groups</option>
+      </select>
+    </div>
+
+    <div class="comp-summary" id="compSummary"></div>
+
+    <div id="competitorList"></div>
+
+    <hr class="divider">
+
+    <button class="drawer-toggle" onclick="toggleDrawer('competitorsDrawer', this)">
+      <span>Edit competitor list</span><span>▾</span>
+    </button>
+    <div class="drawer" id="competitorsDrawer">
+      <div class="note">Paste a tab-separated entry list here — same format as: CLASS / RACE N° / NAME / COUNTRY / CHASSIS / TEAM (one competitor per line, header row optional). Re-importing merges with what's already here — existing groups and tyre ticks for matching competitors are kept, not wiped.</div>
+      <textarea id="competitorPaste" placeholder="Paste entry list here…" style="display:block; min-height:120px;"></textarea>
+      <div class="cf-add-row" style="margin-top:8px;">
+        <button class="syncbtn" onclick="importCompetitorPaste()">Import / Merge</button>
+        <button class="syncbtn" onclick="clearAllCompetitors()">Clear all</button>
+      </div>
+      <button class="savebtn" id="competitorSaveBtn" onclick="confirmSaveCompetitors('competitorSaveBtn', '💾 Save competitor changes')">💾 Save competitor changes</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1950,6 +2035,242 @@ function fallbackCopy(text, cb){
   document.body.removeChild(ta);
   cb();
 }
+
+// ==================== COMPETITOR TYRE TRACKING ====================
+
+let competitors = [{"category":"JUNIOR OK","number":12,"name":"Felde, Max","chassis":"Parolin","team":"Ward Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":15,"name":"Pizzonia, Antonio","chassis":"Parolin","team":"Ward Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":16,"name":"Islami, Diar","chassis":"Parolin","team":"Ward Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":17,"name":"Orlando , Michele","chassis":"Dr","team":"Dr Srl","group":"","newTyres":false},{"category":"JUNIOR OK","number":18,"name":"Lazaro, Xavier","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":19,"name":"M\u00fcller , Tiberius","chassis":"Ln","team":"Beyond racing team","group":"","newTyres":false},{"category":"JUNIOR OK","number":21,"name":"Nachawati, Liam","chassis":"Ln","team":"Ricky Flynn Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":22,"name":"Lazarus, Alexander","chassis":"henza","team":"MP motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":23,"name":"Chelidze, Leon","chassis":"Exprit","team":"Forza Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":25,"name":"Manzano Suarez, Miguel","chassis":"Ln","team":"Ricky Flynn Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":27,"name":"Gorski, Leonardo","chassis":"henza","team":"MP motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":29,"name":"Bertolaccini, Martin Luis","chassis":"Parolin","team":"Ward Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":30,"name":"Mazepin , Stepan","chassis":"Gillard","team":"SM Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":35,"name":"Frasnelli, Julian","chassis":"Tony Kart","team":"Tony Kart Racing Team","group":"","newTyres":false},{"category":"JUNIOR OK","number":36,"name":"Newstead , Austin","chassis":"Ln","team":"Rfm","group":"","newTyres":false},{"category":"JUNIOR OK","number":42,"name":"Williams, Harry","chassis":"Exprit","team":"Forza Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":43,"name":"Zvarich, Marat","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":44,"name":"Makinen, Lenni","chassis":"Henza","team":"MP motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":46,"name":"Lawrence, Ava Jean","chassis":"Kr","team":"Dpk Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":49,"name":"Coby, Christian","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":50,"name":"Vlasak, Libor","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":51,"name":"Point, Alexandre","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":52,"name":"Minjae, Kim","chassis":"henza","team":"MP motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":53,"name":"Miron Lorente, Daniel","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":57,"name":"Truchot, Alessandro","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":58,"name":"Diaz De La Vega, Santiago","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":59,"name":"Ferreira, Daniel","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":60,"name":"Robertson, Mason","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":61,"name":"Ratajski, Stan","chassis":"Ln","team":"Rfm","group":"","newTyres":false},{"category":"JUNIOR OK","number":62,"name":"Di Pietrantonio, Lorenzo","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":63,"name":"Perico, Niccol\u00f2","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":67,"name":"Green, Will","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":71,"name":"Bruno, Priam","chassis":"Kr","team":"VictoryLane Karting","group":"","newTyres":false},{"category":"JUNIOR OK","number":73,"name":"Pelfrene, Teo","chassis":"Kr","team":"VictoryLane Karting","group":"","newTyres":false},{"category":"JUNIOR OK","number":76,"name":"Girardello, Gioele","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":77,"name":"Walle, Oskari","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":78,"name":"Tamm, Albert","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":80,"name":"Osadchyi-Suslovskyi, Vsevolod","chassis":"Energy Corse","team":"Energy Corse Srl","group":"","newTyres":false},{"category":"JUNIOR OK","number":82,"name":"Noeppel, Maxime","chassis":"Kr","team":"VictoryLane Karting","group":"","newTyres":false},{"category":"JUNIOR OK","number":86,"name":"Busato, Guilherme","chassis":"Kr","team":"Dpk Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":87,"name":"Nicolas, Guth","chassis":"Kr","team":"Dpk Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":90,"name":"D'ambrosio, Tommaso","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":91,"name":"Legenkyi, Oleksandr","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":92,"name":"Angelard, Julia","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":93,"name":"Spencer, Oliver","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":95,"name":"Dergunov, Matvei","chassis":"Energy corse","team":"Prima Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":97,"name":"Sayer, Jarlath","chassis":"Ln","team":"Rfm","group":"","newTyres":false},{"category":"JUNIOR OK","number":111,"name":"Verbeke, Jef","chassis":"henza","team":"MP motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":123,"name":"Smith, Lucien","chassis":"Kr","team":"Dpk Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":144,"name":"Koreishi, Arhaan","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":145,"name":"D'Ascoli, Luigi","chassis":"Parolin","team":"Ward Racing","group":"","newTyres":false},{"category":"JUNIOR OK","number":146,"name":"Klinkers, Mik","chassis":"henza","team":"MP motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":147,"name":"Policand, Teo","chassis":"Ln","team":"Ricky Flynn Motorsport","group":"","newTyres":false},{"category":"JUNIOR OK","number":148,"name":"Fricker, Daniel Roman","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"OK","number":210,"name":"Wolfe, Noah","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"OK","number":213,"name":"Manach, Benjamin","chassis":"Parolin","team":"Ward Racing","group":"","newTyres":false},{"category":"OK","number":220,"name":"Cuman, Nicolo'","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"OK","number":221,"name":"Simeonov, Svetlen","chassis":"Exprit","team":"Forza Racing","group":"","newTyres":false},{"category":"OK","number":224,"name":"Kornder, Luke","chassis":"Parolin","team":"Ward Racing","group":"","newTyres":false},{"category":"OK","number":227,"name":"Arias , Bosco","chassis":"Ln","team":"Ricky Flynn Motorsport","group":"","newTyres":false},{"category":"OK","number":228,"name":"Domain, Henry","chassis":"Henza","team":"MP motorsport","group":"","newTyres":false},{"category":"OK","number":230,"name":"Taal, Luuk","chassis":"Henza","team":"MP motorsport","group":"","newTyres":false},{"category":"OK","number":232,"name":"Ris, Yves","chassis":"Henza","team":"MP motorsport","group":"","newTyres":false},{"category":"OK","number":236,"name":"Niklas, Schaufler","chassis":"Kr","team":"Dpk Racing","group":"","newTyres":false},{"category":"OK","number":237,"name":"Pokorny, Daniel","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"OK","number":238,"name":"Kappen, Nathan","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"OK","number":239,"name":"Stalmach, Wiktor","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"OK","number":243,"name":"Drummond, Zac","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"OK","number":245,"name":"Gallo, Matteo","chassis":"Ln","team":"Rfm","group":"","newTyres":false},{"category":"OK","number":251,"name":"Nunez, Luis Fernando","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"OK","number":254,"name":"Weiland, Max","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"OK","number":255,"name":"Blanco, Bruno","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"OK","number":257,"name":"Baglin, Noah","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"OK","number":270,"name":"Hoogendoorn, Dean","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"OK","number":271,"name":"Calleja, William","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"OK","number":272,"name":"Purcell, Evan","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"OK","number":273,"name":"Garst, Marco","chassis":"Kr","team":"Koski Motorsport","group":"","newTyres":false},{"category":"OK","number":274,"name":"McGaughy, Michael","chassis":"Kr","team":"Koski Motorsport","group":"","newTyres":false},{"category":"OK","number":275,"name":"Viapiana, Valerio","chassis":"Kr","team":"Tony Kart","group":"","newTyres":false},{"category":"OK","number":281,"name":"gorecki, Piotr","chassis":"henza","team":"MP motorsport","group":"","newTyres":false},{"category":"OK","number":282,"name":"gorecki, Mikhal","chassis":"henza","team":"MP motorsport","group":"","newTyres":false},{"category":"OK","number":283,"name":"Miguez, Manuel","chassis":"Kr","team":"VictoryLane Karting","group":"","newTyres":false},{"category":"OK","number":285,"name":"Busato, Rafael","chassis":"Kr","team":"Dpk Racing","group":"","newTyres":false},{"category":"OK","number":291,"name":"Cocchianella, Antonio","chassis":"Henza","team":"Mp Motorsport","group":"","newTyres":false},{"category":"OK","number":293,"name":"Da Silva, Gustavo","chassis":"Kr","team":"VictoryLane Karting","group":"","newTyres":false},{"category":"OK","number":294,"name":"Mazzola, Ludovico","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"OK","number":295,"name":"Sala, Filippo","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"OK","number":296,"name":"Ivannikov, Vladimir","chassis":"Birel Art","team":"Birel Art Racing","group":"","newTyres":false},{"category":"OK","number":297,"name":"Sharp, Aston","chassis":"Birel Art","team":"Var By Birel","group":"","newTyres":false},{"category":"OK","number":300,"name":"Thirumalaiswamy , Jude","chassis":"Kr","team":"VictoryLane Karting","group":"","newTyres":false},{"category":"OK","number":317,"name":"Rocha, Francisco","chassis":"Exprit","team":"Forza Racing","group":"","newTyres":false},{"category":"OK","number":320,"name":"Dudkowski, Ksawery","chassis":"Kr","team":"Koski Motorsport","group":"","newTyres":false},{"category":"OK","number":322,"name":"Nagy, Roland","chassis":"Kr","team":"Dpk Racing","group":"","newTyres":false},{"category":"OK","number":323,"name":"Sini, Oliveri","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"OK","number":325,"name":"Xie, Huifei","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"OK","number":330,"name":"Koreishi, Rayan","chassis":"Kr","team":"KR Motorsport","group":"","newTyres":false},{"category":"OK","number":334,"name":"Rost, Kristian- Aleksander","chassis":"Kr","team":"Fusion Motorsport","group":"","newTyres":false},{"category":"OK","number":338,"name":"Giusto, Giacomo","chassis":"Parolin","team":"Parolin Motorsport","group":"","newTyres":false},{"category":"OK","number":340,"name":"Westwood, Benjamin","chassis":"Kr","team":"","group":"","newTyres":false}]
+;
+
+const COMP_STORAGE_KEY = 'runreport_competitors_v1';
+let currentCategoryTab = null;
+
+function switchTab(name){
+  const isReport = name === 'report';
+  document.getElementById('tabRunReport').style.display = isReport ? 'block' : 'none';
+  document.getElementById('tabCompetitors').style.display = isReport ? 'none' : 'block';
+  document.getElementById('tabBtn_report').classList.toggle('active', isReport);
+  document.getElementById('tabBtn_competitors').classList.toggle('active', !isReport);
+  if (!isReport) renderCategoryTabs();
+}
+
+function saveCompetitors(){
+  try{
+    localStorage.setItem(COMP_STORAGE_KEY, JSON.stringify(competitors));
+  } catch(e){}
+  syncCompetitorsToFirebase();
+}
+function loadCompetitorsFromStorage(){
+  try{
+    const raw = localStorage.getItem(COMP_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length) competitors = parsed;
+  } catch(e){}
+}
+loadCompetitorsFromStorage();
+
+function confirmSaveCompetitors(btnId, label){
+  saveCompetitors();
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.textContent = 'Saved ✓';
+  setTimeout(()=>{ btn.textContent = label; }, 1600);
+}
+
+// ---- Firebase sync (separate document from teamdata) ----
+let competitorsFirebaseSyncing = false;
+let competitorsFirebaseReady = false;
+let competitorsPendingLocalChange = false;
+
+function syncCompetitorsToFirebase(){
+  if (competitorsFirebaseSyncing) return;
+  if (window.__saveCompetitorsToFirebase && competitorsFirebaseReady){
+    competitorsPendingLocalChange = false;
+    window.__saveCompetitorsToFirebase({competitors});
+  } else {
+    competitorsPendingLocalChange = true;
+  }
+}
+function handleCompetitorsFirebaseUpdate(data){
+  if (competitorsPendingLocalChange){
+    syncCompetitorsToFirebase();
+    return;
+  }
+  if (!data){
+    syncCompetitorsToFirebase();
+    return;
+  }
+  competitorsFirebaseSyncing = true;
+  if (Array.isArray(data.competitors) && data.competitors.length) competitors = data.competitors;
+  renderCategoryTabs();
+  saveCompetitors();
+  competitorsFirebaseSyncing = false;
+}
+window.__onCompetitorsFirebaseReady = function(){
+  competitorsFirebaseReady = true;
+  window.__subscribeCompetitorsFirebase(handleCompetitorsFirebaseUpdate);
+};
+
+// ---- rendering ----
+function competitorCategories(){
+  const set = [];
+  competitors.forEach(c=>{ if (!set.includes(c.category)) set.push(c.category); });
+  return set;
+}
+
+function renderCategoryTabs(){
+  const cats = competitorCategories();
+  if (!currentCategoryTab || !cats.includes(currentCategoryTab)){
+    currentCategoryTab = cats[0] || null;
+  }
+  const bar = document.getElementById('categoryTabbar');
+  bar.innerHTML = cats.map(cat=>
+    `<button class="cat-tabbtn ${cat===currentCategoryTab ? 'active' : ''}" onclick="selectCategoryTab('${cat.replace(/'/g,"\\'")}')">${cat}</button>`
+  ).join('');
+  updateGroupFilterOptions();
+  renderCompetitorList();
+}
+
+function selectCategoryTab(cat){
+  currentCategoryTab = cat;
+  document.getElementById('compSearch').value = '';
+  renderCategoryTabs();
+}
+
+function updateGroupFilterOptions(){
+  const sel = document.getElementById('compGroupFilter');
+  const prev = sel.value;
+  const groups = [];
+  competitors.filter(c=>c.category===currentCategoryTab).forEach(c=>{
+    if (c.group && !groups.includes(c.group)) groups.push(c.group);
+  });
+  groups.sort();
+  sel.innerHTML = '<option value="">All groups</option>' +
+    groups.map(g=>`<option value="${g}">${g}</option>`).join('');
+  if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+}
+
+function renderCompetitorList(){
+  const container = document.getElementById('competitorList');
+  const search = (document.getElementById('compSearch').value || '').trim().toLowerCase();
+  const groupFilter = document.getElementById('compGroupFilter').value;
+
+  let list = competitors.filter(c=>c.category === currentCategoryTab);
+  if (groupFilter) list = list.filter(c=>c.group === groupFilter);
+  if (search){
+    list = list.filter(c=>
+      String(c.number).includes(search) || c.name.toLowerCase().includes(search)
+    );
+  }
+  list.sort((a,b)=>a.number-b.number);
+
+  const flaggedCount = competitors.filter(c=>c.category===currentCategoryTab && c.newTyres).length;
+  const totalCount = competitors.filter(c=>c.category===currentCategoryTab).length;
+  document.getElementById('compSummary').textContent =
+    `${flaggedCount} / ${totalCount} flagged new tyres in ${currentCategoryTab || '—'}`;
+
+  if (!list.length){
+    container.innerHTML = '<div class="note" style="text-align:center;">No competitors match.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(c=>{
+    const safeCat = c.category.replace(/'/g,"\\'");
+    const safeName = c.name.replace(/'/g,"\\'");
+    return `<div class="comp-row ${c.newTyres ? 'flagged' : ''}">
+      <div class="comp-num">#${c.number}</div>
+      <div class="comp-info">
+        <div class="comp-name">${c.name}</div>
+        <div class="comp-team">${c.team || ''}</div>
+      </div>
+      <input class="comp-group-input" type="text" maxlength="3" value="${c.group || ''}"
+        placeholder="Grp" onchange="updateCompetitorGroup('${safeCat}', ${c.number}, this.value)">
+      <input class="comp-tick" type="checkbox" ${c.newTyres ? 'checked' : ''}
+        onchange="toggleNewTyres('${safeCat}', ${c.number}, this.checked)">
+    </div>`;
+  }).join('');
+}
+
+function findCompetitor(category, number){
+  return competitors.find(c=>c.category===category && c.number===number);
+}
+
+function toggleNewTyres(category, number, checked){
+  const c = findCompetitor(category, number);
+  if (!c) return;
+  c.newTyres = checked;
+  c.newTyresAt = checked ? new Date().toISOString() : null;
+  renderCompetitorList();
+  saveCompetitors();
+}
+
+function updateCompetitorGroup(category, number, value){
+  const c = findCompetitor(category, number);
+  if (!c) return;
+  c.group = value.trim();
+  updateGroupFilterOptions();
+  renderCompetitorList();
+  saveCompetitors();
+}
+
+function parseCompetitorPaste(text){
+  const lines = text.split('\n').map(l=>l.replace(/\r$/,'')).filter(l=>l.trim());
+  const rows = [];
+  lines.forEach(line=>{
+    let parts = line.split('\t');
+    if (parts.length < 3) parts = line.split(/ {2,}/);
+    if (parts.length < 3) return;
+    const category = (parts[0]||'').trim();
+    const numRaw = (parts[1]||'').trim();
+    const name = (parts[2]||'').trim();
+    const chassis = (parts[4]||'').trim();
+    const team = (parts[5]||'').trim();
+    if (!category || category.toUpperCase() === 'CLASS') return; // header row
+    const number = parseInt(numRaw, 10);
+    if (isNaN(number) || number === 0) return;
+    if (!name) return;
+    rows.push({category, number, name, chassis, team});
+  });
+  return rows;
+}
+
+function importCompetitorPaste(){
+  const text = document.getElementById('competitorPaste').value;
+  const parsed = parseCompetitorPaste(text);
+  if (!parsed.length){
+    alert('No valid rows found. Expected tab-separated: CLASS, RACE N\u00b0, NAME, COUNTRY, CHASSIS, TEAM');
+    return;
+  }
+  let added = 0, updated = 0;
+  parsed.forEach(row=>{
+    const existing = findCompetitor(row.category, row.number);
+    if (existing){
+      existing.name = row.name;
+      existing.chassis = row.chassis;
+      existing.team = row.team;
+      updated++;
+    } else {
+      competitors.push({
+        category: row.category, number: row.number, name: row.name,
+        chassis: row.chassis, team: row.team, group: '', newTyres: false
+      });
+      added++;
+    }
+  });
+  document.getElementById('competitorPaste').value = '';
+  renderCategoryTabs();
+  saveCompetitors();
+  alert(`Imported: ${added} new, ${updated} updated. Groups and tyre ticks for existing competitors were kept.`);
+}
+
+function clearAllCompetitors(){
+  if (!confirm('Remove every competitor from the list? This cannot be undone (besides re-importing).')) return;
+  competitors = [];
+  currentCategoryTab = null;
+  renderCategoryTabs();
+  saveCompetitors();
+}
+
 </script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
@@ -1969,6 +2290,7 @@ function fallbackCopy(text, cb){
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const teamDocRef = doc(db, "teamdata", "main");
+  const competitorsDocRef = doc(db, "competitors", "main");
 
   window.__saveToFirebase = function(data){
     setDoc(teamDocRef, data).catch(err=>{
@@ -1984,8 +2306,23 @@ function fallbackCopy(text, cb){
     });
   };
 
+  window.__saveCompetitorsToFirebase = function(data){
+    setDoc(competitorsDocRef, data).catch(err=>{
+      console.error("Firebase competitors save failed:", err);
+    });
+  };
+
+  window.__subscribeCompetitorsFirebase = function(callback){
+    onSnapshot(competitorsDocRef, (snap)=>{
+      callback(snap.exists() ? snap.data() : null);
+    }, (err)=>{
+      console.error("Firebase competitors listener error:", err);
+    });
+  };
+
   // the main app script (loaded earlier, synchronously) defines this once it's ready
   if (window.__onFirebaseReady) window.__onFirebaseReady();
+  if (window.__onCompetitorsFirebaseReady) window.__onCompetitorsFirebaseReady();
 </script>
 </body>
 </html>
