@@ -354,6 +354,29 @@
           <option value="🇵🇹">🇵🇹 Portugal</option>
           <option value="🇨🇳">🇨🇳 China</option>
           <option value="🇮🇩">🇮🇩 Indonesia</option>
+          <option value="🇮🇳">🇮🇳 India</option>
+          <option value="🇧🇷">🇧🇷 Brazil</option>
+          <option value="🇸🇪">🇸🇪 Sweden</option>
+          <option value="🇩🇰">🇩🇰 Denmark</option>
+          <option value="🇫🇮">🇫🇮 Finland</option>
+          <option value="🇳🇴">🇳🇴 Norway</option>
+          <option value="🇨🇭">🇨🇭 Switzerland</option>
+          <option value="🇦🇹">🇦🇹 Austria</option>
+          <option value="🇵🇱">🇵🇱 Poland</option>
+          <option value="🇨🇿">🇨🇿 Czechia</option>
+          <option value="🇭🇺">🇭🇺 Hungary</option>
+          <option value="🇷🇴">🇷🇴 Romania</option>
+          <option value="🇺🇦">🇺🇦 Ukraine</option>
+          <option value="🇷🇺">🇷🇺 Russia</option>
+          <option value="🇮🇪">🇮🇪 Ireland</option>
+          <option value="🇬🇷">🇬🇷 Greece</option>
+          <option value="🇹🇷">🇹🇷 Turkey</option>
+          <option value="🇯🇵">🇯🇵 Japan</option>
+          <option value="🇰🇷">🇰🇷 South Korea</option>
+          <option value="🇦🇺">🇦🇺 Australia</option>
+          <option value="🇨🇦">🇨🇦 Canada</option>
+          <option value="🇦🇪">🇦🇪 UAE</option>
+          <option value="🇿🇦">🇿🇦 South Africa</option>
           <option value="🏁">🏁 Other</option>
         </select>
       </div>
@@ -559,6 +582,29 @@
         <option value="🇵🇹">🇵🇹 POR</option>
         <option value="🇨🇳">🇨🇳 CHN</option>
         <option value="🇮🇩">🇮🇩 IDN</option>
+        <option value="🇮🇳">🇮🇳 IND</option>
+        <option value="🇧🇷">🇧🇷 BRA</option>
+        <option value="🇸🇪">🇸🇪 SWE</option>
+        <option value="🇩🇰">🇩🇰 DEN</option>
+        <option value="🇫🇮">🇫🇮 FIN</option>
+        <option value="🇳🇴">🇳🇴 NOR</option>
+        <option value="🇨🇭">🇨🇭 SUI</option>
+        <option value="🇦🇹">🇦🇹 AUT</option>
+        <option value="🇵🇱">🇵🇱 POL</option>
+        <option value="🇨🇿">🇨🇿 CZE</option>
+        <option value="🇭🇺">🇭🇺 HUN</option>
+        <option value="🇷🇴">🇷🇴 ROU</option>
+        <option value="🇺🇦">🇺🇦 UKR</option>
+        <option value="🇷🇺">🇷🇺 RUS</option>
+        <option value="🇮🇪">🇮🇪 IRL</option>
+        <option value="🇬🇷">🇬🇷 GRE</option>
+        <option value="🇹🇷">🇹🇷 TUR</option>
+        <option value="🇯🇵">🇯🇵 JPN</option>
+        <option value="🇰🇷">🇰🇷 KOR</option>
+        <option value="🇦🇺">🇦🇺 AUS</option>
+        <option value="🇨🇦">🇨🇦 CAN</option>
+        <option value="🇦🇪">🇦🇪 UAE</option>
+        <option value="🇿🇦">🇿🇦 RSA</option>
         <option value="🏁">🏁 Other</option>
       </select>
       <button class="addbtn" onclick="addDriver()">+</button>
@@ -702,11 +748,14 @@ let firebaseSyncing = false;
 let firebaseReady = false;
 let pendingLocalChange = false;
 
+let lastPushedTeamPayload = null;
 function syncToFirebase(){
   if (firebaseSyncing) return; // don't echo a just-received cloud update straight back up
   if (window.__saveToFirebase && firebaseReady){
     pendingLocalChange = false;
-    window.__saveToFirebase({drivers, events, defaultBgImage});
+    const payload = {drivers, events, defaultBgImage};
+    lastPushedTeamPayload = JSON.stringify(payload);
+    window.__saveToFirebase(payload);
   } else {
     // Firebase isn't connected yet — remember to push this once it is,
     // instead of silently dropping it and letting stale cloud data win.
@@ -725,6 +774,14 @@ function handleFirebaseUpdate(data){
     syncToFirebase();
     return;
   }
+  const incomingStr = JSON.stringify(data);
+  if (incomingStr === lastPushedTeamPayload){
+    // this snapshot is just Firestore confirming our own recent write —
+    // local state already matches it, so skip the re-render entirely
+    // (this is what was resetting scroll position on every edit)
+    return;
+  }
+  lastPushedTeamPayload = incomingStr;
   firebaseSyncing = true;
   if (Array.isArray(data.drivers) && data.drivers.length) drivers = data.drivers;
   if (Array.isArray(data.events) && data.events.length) events = data.events;
@@ -2082,11 +2139,14 @@ let competitorsFirebaseSyncing = false;
 let competitorsFirebaseReady = false;
 let competitorsPendingLocalChange = false;
 
+let lastPushedCompetitorsPayload = null;
 function syncCompetitorsToFirebase(){
   if (competitorsFirebaseSyncing) return;
   if (window.__saveCompetitorsToFirebase && competitorsFirebaseReady){
     competitorsPendingLocalChange = false;
-    window.__saveCompetitorsToFirebase({competitors});
+    const payload = {competitors};
+    lastPushedCompetitorsPayload = JSON.stringify(payload);
+    window.__saveCompetitorsToFirebase(payload);
   } else {
     competitorsPendingLocalChange = true;
   }
@@ -2100,6 +2160,12 @@ function handleCompetitorsFirebaseUpdate(data){
     syncCompetitorsToFirebase();
     return;
   }
+  const incomingStr = JSON.stringify(data);
+  if (incomingStr === lastPushedCompetitorsPayload){
+    // just an echo of our own recent write — skip the re-render
+    return;
+  }
+  lastPushedCompetitorsPayload = incomingStr;
   competitorsFirebaseSyncing = true;
   if (Array.isArray(data.competitors) && data.competitors.length) competitors = data.competitors;
   renderCategoryTabs();
