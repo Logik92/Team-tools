@@ -171,13 +171,18 @@
   .drawer{ display:none; margin-top:12px; }
   .drawer.open{ display:block; }
   .driver-row{
-    display:flex; align-items:center; justify-content:space-between;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
     background:var(--panel); border:1px solid var(--line); border-radius:6px;
     padding:9px 12px; margin-bottom:6px; font-size:14px;
   }
   .driver-row .rm{
     background:none; border:none; color:var(--red); font-size:18px;
     line-height:1; cursor:pointer; padding:4px 8px;
+  }
+  .driver-row span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+  .driver-row .dr-cat{
+    width:auto; flex:0 0 auto; padding:4px 20px 4px 6px; font-size:11px;
+    background-position: calc(100% - 8px) calc(1em - 1px), calc(100% - 5px) calc(1em - 1px);
   }
   .addrow{ display:grid; grid-template-columns:1fr 90px 44px; gap:8px; margin-top:10px; }
   .addbtn{
@@ -568,8 +573,8 @@
   </button>
   <div class="drawer" id="driversDrawer">
     <div id="driverList"></div>
-    <div class="addrow">
-      <input id="newDriverName" type="text" placeholder="Driver name" autocapitalize="words">
+    <input id="newDriverName" type="text" placeholder="Driver name" autocapitalize="words" style="margin-bottom:8px;">
+    <div class="addrow" style="grid-template-columns:1fr 90px 44px;">
       <select id="newDriverFlag">
         <option value="🇮🇹">🇮🇹 ITA</option>
         <option value="🇬🇧">🇬🇧 GBR</option>
@@ -607,6 +612,14 @@
         <option value="🇦🇪">🇦🇪 UAE</option>
         <option value="🇿🇦">🇿🇦 RSA</option>
         <option value="🏁">🏁 Other</option>
+      </select>
+      <select id="newDriverCategory">
+        <option value="">Category</option>
+        <option value="OK">OK</option>
+        <option value="OKJ">OKJ</option>
+        <option value="OKN">OKN</option>
+        <option value="OKNJ">OKNJ</option>
+        <option value="KZ">KZ</option>
       </select>
       <button class="addbtn" onclick="addDriver()">+</button>
     </div>
@@ -691,11 +704,12 @@ let drivers = [
 // fp: number of Free Practice sessions offered
 // heatLetters: number of heat letter groups offered (0 = numbers only, e.g. Heat 1/2/3)
 // prefinal / superheat / repechage: whether those session types are offered
-// sprocketCat: 'okj' | 'kz' | 'both' — which sprocket range to use
+// sprocket range/defaults are chosen automatically by the current driver's category (KZ vs everyone else)
 function defaultEventSettings(){
   return { fp:20, heatLetters:7, prefinal:true, superheat:true, repechage:false,
-    showWarmup:true, showHeat:true, showQualifying:true, showFinal:true,
-    sprocketCat:'both', okjMin:10, okjMax:14, kzMin:10, kzMax:14, sprocketDefault:12,
+    showWarmup:true, showHeat:true, showQualifying:true, showFinal:true, fpOnly:false,
+    okjMin:10, okjMax:14, kzMin:10, kzMax:14, sprocketDefault:12, kzSprocketDefault:10,
+    rearDefaultOkj:76, rearDefaultKz:76,
     customFields:[], bgImage:null, qualMode:'series', qualSeriesCount:5,
     warmupCount:2, chassisBrands:['KR1','KR2'],
     showHubs:false, showAxle:true, showTyres:true, showPressure:true,
@@ -927,14 +941,29 @@ function renderDriverList(){
   const list = document.getElementById('driverList');
   list.innerHTML = '';
   updateDriverCount();
+  const cats = ['','OK','OKJ','OKN','OKNJ','KZ'];
   drivers.forEach((d, i)=>{
     const row = document.createElement('div');
     row.className = 'driver-row';
     const chassisBadge = (d.chassisList && d.chassisList.length)
-      ? `<span style="color:var(--amber); font-size:11px;">🏎️ ${d.chassisList.length}</span>` : '';
-    row.innerHTML = `<span>${d.flag} ${d.name} ${chassisBadge}</span><button class="rm" onclick="removeDriver(${i})">✕</button>`;
+      ? `<span style="color:var(--amber); font-size:11px; flex:0 0 auto;">🏎️ ${d.chassisList.length}</span>` : '';
+    const catOptions = cats.map(c=>
+      `<option value="${c}" ${d.category===c ? 'selected' : ''}>${c || '–'}</option>`
+    ).join('');
+    row.innerHTML = `<span>${d.flag} ${d.name}</span>${chassisBadge}<select class="dr-cat" onchange="updateDriverCategory(${i}, this.value)">${catOptions}</select><button class="rm" onclick="removeDriver(${i})">✕</button>`;
     list.appendChild(row);
   });
+}
+
+function updateDriverCategory(i, value){
+  drivers[i].category = value;
+  const driver = drivers[i];
+  if (driverSelect.value === driver.name){
+    populateAllChassisPickers();
+    refreshAllSprocketDropdowns(currentEventSettings);
+    refreshRearSprocketDefaults();
+  }
+  saveTeamData();
 }
 
 function addDriver(){
@@ -942,7 +971,8 @@ function addDriver(){
   const name = nameInput.value.trim();
   if (!name) return;
   const flag = document.getElementById('newDriverFlag').value;
-  drivers.push({name, flag});
+  const category = document.getElementById('newDriverCategory').value;
+  drivers.push({name, flag, category});
   nameInput.value = '';
   renderDriverList();
   renderDriverSelect(currentEventSettings);
@@ -1065,7 +1095,11 @@ function renderEventList(){
           <label>Event name</label>
           <input type="text" value="${ev.name}" style="width:150px; flex:0 0 auto;" onchange="renameEvent(${i}, this.value)">
         </div>
-        <div class="es-sub">Sessions offered (Free Practice is always available)</div>
+        <div class="es-row">
+          <label>FP-only event (test day)</label>
+          <input type="checkbox" ${ev.fpOnly ? 'checked' : ''} onchange="updateEventSetting(${i},'fpOnly',this.checked)">
+        </div>
+        <div class="es-sub">Sessions offered (Free Practice is always available). Ignored if FP-only is on above.</div>
         <div class="es-row">
           <label>Warmup</label>
           <input type="checkbox" ${ev.showWarmup ? 'checked' : ''} onchange="updateEventSetting(${i},'showWarmup',this.checked)">
@@ -1117,21 +1151,22 @@ function renderEventList(){
           <label>Qualifying series count</label>
           <input type="number" min="1" max="10" value="${ev.qualSeriesCount}" onchange="updateEventSetting(${i},'qualSeriesCount',this.value,true)">
         </div>
-        <div class="es-row">
-          <label>Sprocket category</label>
-          <select onchange="updateEventSetting(${i},'sprocketCat',this.value)">
-            <option value="okj" ${ev.sprocketCat==='okj'?'selected':''}>OKJ</option>
-            <option value="kz" ${ev.sprocketCat==='kz'?'selected':''}>KZ</option>
-            <option value="both" ${ev.sprocketCat==='both'?'selected':''}>Both</option>
-          </select>
-        </div>
-        <div class="es-sub">OKJ sprocket range</div>
+        <div class="es-sub">Sprocket range is set automatically by driver category — KZ drivers get the KZ range, everyone else (OK/OKJ/OKN/OKNJ) gets the Direct Drive range.</div>
+        <div class="es-sub">Direct Drive sprocket range</div>
         <div class="es-row">
           <div class="es-range">
             <input type="number" value="${ev.okjMin}" onchange="updateEventSetting(${i},'okjMin',this.value,true)">
             <span>–</span>
             <input type="number" value="${ev.okjMax}" onchange="updateEventSetting(${i},'okjMax',this.value,true)">
           </div>
+        </div>
+        <div class="es-row">
+          <label>Default sprocket (pignon) — Direct Drive</label>
+          <input type="number" value="${ev.sprocketDefault}" onchange="updateEventSetting(${i},'sprocketDefault',this.value,true)">
+        </div>
+        <div class="es-row">
+          <label>Rear axle default — Direct Drive</label>
+          <input type="number" value="${ev.rearDefaultOkj}" onchange="updateEventSetting(${i},'rearDefaultOkj',this.value,true)">
         </div>
         <div class="es-sub">KZ sprocket range</div>
         <div class="es-row">
@@ -1140,6 +1175,14 @@ function renderEventList(){
             <span>–</span>
             <input type="number" value="${ev.kzMax}" onchange="updateEventSetting(${i},'kzMax',this.value,true)">
           </div>
+        </div>
+        <div class="es-row">
+          <label>Default sprocket (pignon) — KZ</label>
+          <input type="number" value="${ev.kzSprocketDefault}" onchange="updateEventSetting(${i},'kzSprocketDefault',this.value,true)">
+        </div>
+        <div class="es-row">
+          <label>Rear axle default — KZ</label>
+          <input type="number" value="${ev.rearDefaultKz}" onchange="updateEventSetting(${i},'rearDefaultKz',this.value,true)">
         </div>
 
         <div class="es-row">
@@ -1165,10 +1208,6 @@ function renderEventList(){
         <div class="es-row">
           <label>Show Notes field</label>
           <input type="checkbox" ${ev.showNotes ? 'checked' : ''} onchange="updateEventSetting(${i},'showNotes',this.checked)">
-        </div>
-        <div class="es-row">
-          <label>Default sprocket (pignon)</label>
-          <input type="number" value="${ev.sprocketDefault}" onchange="updateEventSetting(${i},'sprocketDefault',this.value,true)">
         </div>
 
         <div class="es-sub">Chassis brands</div>
@@ -1395,6 +1434,8 @@ driverSelect.addEventListener('change', function(){
     }
   }
   populateAllChassisPickers();
+  refreshAllSprocketDropdowns(currentEventSettings);
+  refreshRearSprocketDefaults();
 });
 
 // restore this phone's last-used driver on load, if it's still in the roster
@@ -1569,6 +1610,26 @@ function updateSessionSubfields(){
     (val === 'Qualifying' && currentEventSettings.qualMode !== 'unique') ? 'flex' : 'none';
   document.getElementById('superheatWrap').style.display = val === 'Superheat' ? 'block' : 'none';
   document.getElementById('prefinalWrap').style.display = val === 'Prefinal' ? 'block' : 'none';
+  updateTyreOptionsForSession();
+}
+
+// In Free Practice, only 4 New / Used make sense — hide the partial-new options
+function updateTyreOptionsForSession(){
+  const isFp = document.getElementById('session').value === 'Free Practice';
+  document.querySelectorAll('.run-block').forEach(block=>{
+    const n = block.dataset.run;
+    ['tyre2newrad','tyre2neweng'].forEach(prefix=>{
+      const input = document.getElementById(`${prefix}_${n}`);
+      if (!input) return;
+      const label = input.closest('.tyre-opt');
+      if (isFp){
+        if (label) label.style.display = 'none';
+        if (input.checked){ input.checked = false; }
+      } else if (label){
+        label.style.display = '';
+      }
+    });
+  });
 }
 document.getElementById('session').addEventListener('change', updateSessionSubfields);
 
@@ -1588,13 +1649,15 @@ function refreshSessionOptions(ev){
   const prev = sel.value;
   sel.innerHTML = '';
   const opts = [...SESSION_BASE];
-  if (ev.showWarmup) opts.push('Warmup');
-  if (ev.showHeat) opts.push('Heat');
-  if (ev.showQualifying) opts.push('Qualifying');
-  if (ev.superheat) opts.push('Superheat');
-  if (ev.prefinal) opts.push('Prefinal');
-  if (ev.repechage) opts.push('Repechage');
-  if (ev.showFinal) opts.push('Final');
+  if (!ev.fpOnly){
+    if (ev.showWarmup) opts.push('Warmup');
+    if (ev.showHeat) opts.push('Heat');
+    if (ev.showQualifying) opts.push('Qualifying');
+    if (ev.superheat) opts.push('Superheat');
+    if (ev.prefinal) opts.push('Prefinal');
+    if (ev.repechage) opts.push('Repechage');
+    if (ev.showFinal) opts.push('Final');
+  }
   opts.forEach(v=>{
     const o = document.createElement('option');
     o.value = v; o.textContent = v;
@@ -1607,10 +1670,17 @@ function refreshSessionOptions(ev){
   updateSessionSubfields();
 }
 
-// ---- sprocket options rebuilt from event settings ----
+// ---- sprocket options rebuilt from event settings + current driver's category ----
+// KZ drivers use the KZ (gearbox) sprocket range; every other category (OK/OKJ/OKN/OKNJ)
+// uses the Direct Drive range. Unknown/guest driver falls back to a combined range.
+function currentDriverCategory(){
+  const driver = drivers.find(d=>d.name === driverSelect.value);
+  return driver ? driver.category : '';
+}
 function sprocketRangeFor(ev){
-  if (ev.sprocketCat === 'okj') return [ev.okjMin, ev.okjMax];
-  if (ev.sprocketCat === 'kz') return [ev.kzMin, ev.kzMax];
+  const cat = currentDriverCategory();
+  if (cat === 'KZ') return [ev.kzMin, ev.kzMax];
+  if (cat) return [ev.okjMin, ev.okjMax];
   return [Math.min(ev.okjMin, ev.kzMin), Math.max(ev.okjMax, ev.kzMax)];
 }
 function populateSprocketSelect(sel, min, max, defaultVal){
@@ -1632,10 +1702,22 @@ function populateSprocketSelect(sel, min, max, defaultVal){
 }
 function refreshAllSprocketDropdowns(ev){
   const [min, max] = sprocketRangeFor(ev);
+  const cat = currentDriverCategory();
+  const defaultVal = cat === 'KZ' ? ev.kzSprocketDefault : ev.sprocketDefault;
   document.querySelectorAll('.run-block').forEach(block=>{
     const n = block.dataset.run;
     const sel = document.getElementById(`sprocket_${n}`);
-    if (sel) populateSprocketSelect(sel, min, max, ev.sprocketDefault);
+    if (sel) populateSprocketSelect(sel, min, max, defaultVal);
+  });
+}
+
+function refreshRearSprocketDefaults(){
+  const cat = currentDriverCategory();
+  const val = cat === 'KZ' ? currentEventSettings.rearDefaultKz : currentEventSettings.rearDefaultOkj;
+  document.querySelectorAll('.run-block').forEach(block=>{
+    const n = block.dataset.run;
+    const input = document.getElementById(`gearRear_${n}`);
+    if (input) input.placeholder = val;
   });
 }
 
@@ -1685,6 +1767,7 @@ function applyEventSettings(ev){
   populateHeatFirst(ev.heatLetters);
   refreshSessionOptions(ev);
   refreshAllSprocketDropdowns(ev);
+  refreshRearSprocketDefaults();
   refreshAllChassisBrandDropdowns(ev);
   refreshFieldVisibility(ev);
   refreshCustomFieldsInRuns();
@@ -1940,7 +2023,11 @@ function wireRunExtras(n){
   document.getElementById(`chassisPick_${n}`).addEventListener('change', function(){ applyChassisPickerSelection(n); });
   populateChassisPicker(n);
   const [min, max] = sprocketRangeFor(currentEventSettings);
-  populateSprocketSelect(document.getElementById(`sprocket_${n}`), min, max, currentEventSettings.sprocketDefault);
+  const cat = currentDriverCategory();
+  const sprocketDef = cat === 'KZ' ? currentEventSettings.kzSprocketDefault : currentEventSettings.sprocketDefault;
+  populateSprocketSelect(document.getElementById(`sprocket_${n}`), min, max, sprocketDef);
+  const rearInput = document.getElementById(`gearRear_${n}`);
+  if (rearInput) rearInput.placeholder = cat === 'KZ' ? currentEventSettings.rearDefaultKz : currentEventSettings.rearDefaultOkj;
   populateChassisBrandSelect(document.getElementById(`chassisBrand_${n}`), currentEventSettings.chassisBrands);
   const visMap = {
     hubWrap: currentEventSettings.showHubs,
@@ -1955,6 +2042,7 @@ function wireRunExtras(n){
     if (wrap) wrap.style.display = visMap[prefix] ? 'block' : 'none';
   });
   populateCustomFields(n);
+  updateTyreOptionsForSession();
 }
 
 function addRun(){
