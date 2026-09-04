@@ -333,7 +333,7 @@
   </div>
 
   <div class="field">
-    <label><span class="ic">👤</span>Driver</label>
+    <label><span class="ic">👤</span>Driver <span id="driverCountLabel" style="color:var(--grey); text-transform:none; letter-spacing:0; font-weight:400;"></span></label>
     <select id="driverSelect"></select>
   </div>
 
@@ -443,7 +443,8 @@
 
       <div class="field">
         <label><span class="ic">🏎️</span>Kart / Chassis</label>
-        <div class="row2">
+        <select id="chassisPick_1" style="display:none; margin-bottom:8px;"></select>
+        <div class="row2" id="chassisManualWrap_1">
           <select id="chassisBrand_1"></select>
           <input id="kart_1" type="text" placeholder="1111" autocapitalize="characters">
         </div>
@@ -563,7 +564,7 @@
   <hr class="divider">
 
   <button class="drawer-toggle" onclick="toggleDrawer('driversDrawer', this)">
-    <span>Edit driver list</span><span>▾</span>
+    <span>Edit driver list <span id="driverCountLabel2"></span></span><span>▾</span>
   </button>
   <div class="drawer" id="driversDrawer">
     <div id="driverList"></div>
@@ -620,6 +621,14 @@
       <button class="syncbtn" id="importApplyBtn" style="display:none; width:100%; margin-top:8px;" onclick="applyImport()">Apply</button>
       <div class="note">Covers drivers and events (with their settings) together. When someone updates either list, tap Export and post that code in the WhatsApp group. Everyone else pastes it into Import so every phone matches.</div>
     </div>
+
+    <hr class="divider">
+
+    <div class="es-sub">Import chassis from truck sheet</div>
+    <div class="note">Paste the truck layout grid (driver name row, then 2–3 chassis rows below each — same shape as your Google Sheet). Telemetry numbers (T##) are stripped automatically. Matches are made by name — anyone that doesn't match a driver already on the list gets flagged below instead of guessed at.</div>
+    <textarea id="truckSheetPaste" placeholder="Paste truck sheet here…" style="display:block; min-height:120px;"></textarea>
+    <button class="syncbtn" style="width:100%; margin-top:8px;" onclick="importTruckSheet()">Import chassis</button>
+
     <button class="savebtn" id="driverSaveBtn" onclick="confirmSave('driverSaveBtn', '💾 Save driver changes')">💾 Save driver changes</button>
   </div>
 
@@ -906,13 +915,24 @@ function renderDriverSelect(ev){
   }
 }
 
+function updateDriverCount(){
+  const n = drivers.length;
+  const label1 = document.getElementById('driverCountLabel');
+  const label2 = document.getElementById('driverCountLabel2');
+  if (label1) label1.textContent = `(${n} loaded)`;
+  if (label2) label2.textContent = `(${n})`;
+}
+
 function renderDriverList(){
   const list = document.getElementById('driverList');
   list.innerHTML = '';
+  updateDriverCount();
   drivers.forEach((d, i)=>{
     const row = document.createElement('div');
     row.className = 'driver-row';
-    row.innerHTML = `<span>${d.flag} ${d.name}</span><button class="rm" onclick="removeDriver(${i})">✕</button>`;
+    const chassisBadge = (d.chassisList && d.chassisList.length)
+      ? `<span style="color:var(--amber); font-size:11px;">🏎️ ${d.chassisList.length}</span>` : '';
+    row.innerHTML = `<span>${d.flag} ${d.name} ${chassisBadge}</span><button class="rm" onclick="removeDriver(${i})">✕</button>`;
     list.appendChild(row);
   });
 }
@@ -934,6 +954,74 @@ function removeDriver(i){
   renderDriverList();
   renderDriverSelect(currentEventSettings);
   saveTeamData();
+}
+
+// ---- truck sheet chassis import ----
+function normalizeName(s){
+  return (s || '').toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function parseTruckLayoutBlocks(text){
+  const lines = text.split('\n').map(l=>l.replace(/\r$/, ''));
+  const rows = lines.map(l=>l.split('\t'));
+  const maxCols = rows.reduce((m,r)=>Math.max(m, r.length), 0);
+  rows.forEach(r=>{ while (r.length < maxCols) r.push(''); });
+
+  const results = [];
+  let i = 0;
+  while (i < rows.length){
+    const row = rows[i];
+    if (row.every(c=>c.trim()==='')){ i++; continue; }
+    const nameRow = row;
+    const ch1 = rows[i+1] || [];
+    const ch2 = rows[i+2] || [];
+    for (let col=0; col<maxCols; col++){
+      const name = (nameRow[col] || '').trim();
+      if (!name) continue;
+      const chassisList = [];
+      [ch1, ch2].forEach(chrow=>{
+        const val = (chrow[col] || '').trim();
+        if (!val) return;
+        const parts = val.split(/\s+/);
+        if (parts.length >= 3 && /^T\d+$/i.test(parts[0])){
+          chassisList.push({brand: parts[1], num: parts.slice(2).join(' ')});
+        }
+      });
+      results.push({name, chassisList});
+    }
+    i += 3;
+  }
+  return results;
+}
+
+function importTruckSheet(){
+  const text = document.getElementById('truckSheetPaste').value;
+  const parsed = parseTruckLayoutBlocks(text);
+  if (!parsed.length){
+    alert('No rows found. Paste the truck layout grid, tab-separated, straight from the sheet.');
+    return;
+  }
+  let matched = 0;
+  const unmatched = [];
+  parsed.forEach(entry=>{
+    if (!entry.chassisList.length) return; // empty slot (e.g. "DOOR"), nothing to attach
+    const target = drivers.find(d=>normalizeName(d.name) === normalizeName(entry.name));
+    if (target){
+      target.chassisList = entry.chassisList;
+      matched++;
+    } else {
+      unmatched.push(entry.name);
+    }
+  });
+  document.getElementById('truckSheetPaste').value = '';
+  renderDriverList();
+  renderDriverSelect(currentEventSettings);
+  populateAllChassisPickers();
+  saveTeamData();
+  const msg = unmatched.length
+    ? `Matched ${matched} driver(s).\n\nNo match found for: ${unmatched.join(', ')} — check spelling against the driver list, or add them as new drivers first.`
+    : `Matched ${matched} driver(s). All names matched.`;
+  alert(msg);
 }
 
 // ---- events ----
@@ -1306,6 +1394,7 @@ driverSelect.addEventListener('change', function(){
       applyChassisMemory('1');
     }
   }
+  populateAllChassisPickers();
 });
 
 // restore this phone's last-used driver on load, if it's still in the roster
@@ -1601,6 +1690,7 @@ function applyEventSettings(ev){
   refreshCustomFieldsInRuns();
   applyEventBackground(ev);
   renderDriverSelect(ev);
+  populateAllChassisPickers();
 }
 applyEventSettings(events[0]);
 
@@ -1629,7 +1719,8 @@ function runFieldsHTML(n){
     <div class="run-label" id="runLabel_${n}">Run ${n}<button class="rm" onclick="removeRun(${n})">✕ remove</button></div>
     <div class="field">
       <label><span class="ic">🏎️</span>Kart / Chassis</label>
-      <div class="row2">
+      <select id="chassisPick_${n}" style="display:none; margin-bottom:8px;"></select>
+      <div class="row2" id="chassisManualWrap_${n}">
         <select id="chassisBrand_${n}"></select>
         <input id="kart_${n}" type="text" placeholder="1111" autocapitalize="characters">
       </div>
@@ -1717,6 +1808,70 @@ function refreshCustomFieldsInRuns(){
   });
 }
 
+function populateChassisPicker(n){
+  const picker = document.getElementById(`chassisPick_${n}`);
+  const manualWrap = document.getElementById(`chassisManualWrap_${n}`);
+  if (!picker || !manualWrap) return;
+
+  if (driverSelect.value === '__other'){
+    picker.style.display = 'none';
+    manualWrap.style.display = '';
+    return;
+  }
+  const driver = drivers.find(d=>d.name === driverSelect.value);
+  const list = (driver && driver.chassisList) ? driver.chassisList : [];
+  if (!list.length){
+    picker.style.display = 'none';
+    manualWrap.style.display = '';
+    return;
+  }
+
+  picker.innerHTML = '';
+  list.forEach((c, idx)=>{
+    const o = document.createElement('option');
+    o.value = idx;
+    o.textContent = `${c.brand} ${c.num}`;
+    picker.appendChild(o);
+  });
+  const otherOpt = document.createElement('option');
+  otherOpt.value = '__other';
+  otherOpt.textContent = 'Other (type manually)';
+  picker.appendChild(otherOpt);
+
+  // if the field already holds a value matching one of their known chassis
+  // (e.g. auto-filled from chassis memory), default the picker to that one
+  const curBrand = document.getElementById(`chassisBrand_${n}`).value;
+  const curNum = (document.getElementById(`kart_${n}`).value || '').trim();
+  const matchIdx = list.findIndex(c=>c.brand===curBrand && c.num===curNum);
+  picker.value = matchIdx >= 0 ? String(matchIdx) : '0';
+  picker.style.display = 'block';
+  applyChassisPickerSelection(n);
+}
+
+function applyChassisPickerSelection(n){
+  const picker = document.getElementById(`chassisPick_${n}`);
+  const manualWrap = document.getElementById(`chassisManualWrap_${n}`);
+  const driver = drivers.find(d=>d.name === driverSelect.value);
+  const list = (driver && driver.chassisList) ? driver.chassisList : [];
+  if (picker.value === '__other'){
+    manualWrap.style.display = '';
+  } else {
+    manualWrap.style.display = 'none';
+    const chosen = list[Number(picker.value)];
+    if (chosen){
+      const brandSel = document.getElementById(`chassisBrand_${n}`);
+      if ([...brandSel.options].some(o=>o.value===chosen.brand)) brandSel.value = chosen.brand;
+      document.getElementById(`kart_${n}`).value = chosen.num;
+    }
+  }
+}
+
+function populateAllChassisPickers(){
+  document.querySelectorAll('.run-block').forEach(block=>{
+    populateChassisPicker(block.dataset.run);
+  });
+}
+
 function applyChassisMemory(n){
   const brand = document.getElementById(`chassisBrand_${n}`).value;
   const num = (document.getElementById(`kart_${n}`).value || '').trim();
@@ -1782,6 +1937,8 @@ function wireRunExtras(n){
   });
   document.getElementById(`kart_${n}`).addEventListener('change', function(){ applyChassisMemory(n); });
   document.getElementById(`chassisBrand_${n}`).addEventListener('change', function(){ applyChassisMemory(n); });
+  document.getElementById(`chassisPick_${n}`).addEventListener('change', function(){ applyChassisPickerSelection(n); });
+  populateChassisPicker(n);
   const [min, max] = sprocketRangeFor(currentEventSettings);
   populateSprocketSelect(document.getElementById(`sprocket_${n}`), min, max, currentEventSettings.sprocketDefault);
   populateChassisBrandSelect(document.getElementById(`chassisBrand_${n}`), currentEventSettings.chassisBrands);
