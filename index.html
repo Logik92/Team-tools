@@ -318,6 +318,51 @@
     color:rgba(255,179,26,0.14);
     white-space:nowrap; pointer-events:none; user-select:none; z-index:5;
   }
+  .sw-count-row{
+    display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap;
+  }
+  .sw-count-label{ font-size:12px; color:var(--grey); text-transform:uppercase; letter-spacing:0.06em; }
+  .sw-count-btns{ display:flex; gap:6px; flex:1; }
+  .sw-count-btn{
+    flex:1; padding:8px; background:var(--panel); border:1px solid var(--line);
+    color:var(--grey); border-radius:6px; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .sw-count-btn.active{ background:var(--amber); color:#1a1400; border-color:var(--amber); }
+  .sw-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:14px; margin-bottom:14px;
+  }
+  .sw-card.running{ border-color:var(--green); }
+  .sw-name{
+    width:100%; background:transparent; border:none; border-bottom:1px solid var(--line);
+    color:var(--white); font-size:14px; font-weight:700; padding:4px 0 8px; margin-bottom:10px;
+  }
+  .sw-name:focus{ outline:none; border-color:var(--amber); }
+  .sw-display{
+    font-size:38px; font-weight:700; text-align:center; letter-spacing:0.02em;
+    font-variant-numeric:tabular-nums; margin-bottom:12px; color:var(--white);
+  }
+  .sw-card.running .sw-display{ color:var(--green); }
+  .sw-btn-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .sw-btn{
+    flex:1; padding:13px; border:none; border-radius:6px; font-size:13px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.04em; cursor:pointer;
+  }
+  .sw-btn.start{ background:var(--green); color:#0a1a12; }
+  .sw-btn.stop{ background:var(--red); color:#fff; }
+  .sw-btn.lap{ background:var(--amber); color:#1a1400; }
+  .sw-btn.lap:disabled{ background:var(--panel); color:var(--line); cursor:default; }
+  .sw-btn:active{ opacity:0.8; }
+  .sw-laps{ max-height:160px; overflow-y:auto; }
+  .sw-lap-row{
+    display:flex; justify-content:space-between; font-size:12.5px;
+    padding:6px 4px; border-bottom:1px solid var(--line); color:var(--grey);
+    font-variant-numeric:tabular-nums;
+  }
+  .sw-lap-row:first-child{ color:var(--white); font-weight:700; }
+  .sw-lap-row .lap-num{ width:32px; flex-shrink:0; color:var(--amber); }
+  .sw-lap-row .lap-split{ flex:1; text-align:center; }
+  .sw-lap-row .lap-total{ flex:1; text-align:right; }
   .field-invalid{
     border-color:var(--red) !important;
     box-shadow:0 0 0 1px var(--red);
@@ -338,6 +383,7 @@
   <div class="tabbar">
     <button class="tabbtn active" id="tabBtn_report" onclick="switchTab('report')"><span data-i18n="📋 Session Report">📋 Session Report</span></button>
     <button class="tabbtn" id="tabBtn_competitors" onclick="switchTab('competitors')"><span data-i18n="🏎️ Tyre Tracker">🏎️ Tyre Tracker</span></button>
+    <button class="tabbtn" id="tabBtn_stopwatch" onclick="switchTab('stopwatch')" style="display:none;">⏱️ Stopwatch</button>
   </div>
 
   <div id="tabRunReport">
@@ -700,6 +746,15 @@
       <button class="savebtn" id="competitorSaveBtn" onclick="confirmSaveCompetitors('competitorSaveBtn', '💾 Save competitor changes')">💾 Save competitor changes</button>
     </div>
   </div>
+
+  <div id="tabStopwatch" style="display:none;">
+    <div class="sw-count-row">
+      <span class="sw-count-label">Drivers:</span>
+      <div class="sw-count-btns" id="swCountBtns"></div>
+      <button class="syncbtn" onclick="resetAllStopwatches()">Reset all</button>
+    </div>
+    <div id="stopwatchList"></div>
+  </div>
 </div>
 
 <script>
@@ -739,6 +794,16 @@ function defaultEventSettings(){
     showHubs:false, showAxle:true, showTyres:true, showPressure:true,
     showRimTemp:true, showNotes:true, eventDrivers:null };
 }
+// Fills in any fields a saved/synced event is missing (e.g. an event created
+// before a newer setting existed) with safe defaults, without touching
+// anything the event already has. Prevents one incomplete event from
+// crashing rendering for every event — and everything that runs after it.
+function normalizeEvent(ev){
+  return Object.assign({}, defaultEventSettings(), ev || {});
+}
+function normalizeEvents(list){
+  return Array.isArray(list) ? list.map(normalizeEvent) : list;
+}
 let events = [
   Object.assign({name:"FIA Kristianstad"}, defaultEventSettings(), {fp:5, heatLetters:6, qualSeriesCount:3}),
   Object.assign({name:"Round 1"}, defaultEventSettings()),
@@ -768,7 +833,7 @@ function loadTeamData(){
     if (!raw) return;
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed.drivers) && parsed.drivers.length) drivers = parsed.drivers;
-    if (Array.isArray(parsed.events) && parsed.events.length) events = parsed.events;
+    if (Array.isArray(parsed.events) && parsed.events.length) events = normalizeEvents(parsed.events);
   } catch(e){ /* ignore corrupted/blocked storage */ }
 }
 loadTeamData();
@@ -898,7 +963,7 @@ function handleFirebaseUpdate(data){
   lastPushedTeamPayload = incomingStr;
   firebaseSyncing = true;
   if (Array.isArray(data.drivers) && data.drivers.length) drivers = data.drivers;
-  if (Array.isArray(data.events) && data.events.length) events = data.events;
+  if (Array.isArray(data.events) && data.events.length) events = normalizeEvents(data.events);
   if (typeof data.defaultBgImage === 'string' && data.defaultBgImage) defaultBgImage = data.defaultBgImage;
   renderDriverList();
   renderEventList();
@@ -916,15 +981,9 @@ window.__onFirebaseReady = function(){
 };
 
 function currentEventForBg(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed.drivers) && parsed.drivers.length) drivers = parsed.drivers;
-    if (Array.isArray(parsed.events) && parsed.events.length) events = parsed.events;
-  } catch(e){ /* ignore corrupted/blocked storage */ }
+  if (eventSelect.value === '__other') return null;
+  return events.find(e=>e.name === eventSelect.value) || null;
 }
-loadTeamData();
 
 // ---- default background (used when the selected event has none of its own) ----
 
@@ -1173,6 +1232,7 @@ function renderEventList(){
   list.innerHTML = '';
   events.forEach((ev, i)=>{
     const row = document.createElement('div');
+    try{
     row.className = 'event-row';
     const open = openEventSettingsIndex === i;
     row.innerHTML = `
@@ -1329,6 +1389,11 @@ function renderEventList(){
         <div class="note" style="margin:4px 0 0;">Suggested: landscape JPG or PNG, under 500KB — large images bloat the Export/Import sync codes.</div>
         ${ev.bgImage ? `<div class="bg-preview" style="background-image:url('${ev.bgImage}')"></div><button class="syncbtn" style="margin-top:8px; width:100%;" onclick="removeBgImage(${i})">Remove image</button>` : ''}
       </div>`;
+    } catch(e){
+      // one malformed event should never take the whole list down
+      row.innerHTML = `<div class="event-row-top"><span>${ev.name || 'Event ' + i} (needs re-saving — tap ✕ and re-add if this persists)</span><button class="rm" onclick="removeEvent(${i})">✕</button></div>`;
+      console.error('Event row failed to render:', ev, e);
+    }
     list.appendChild(row);
   });
 }
@@ -1401,7 +1466,7 @@ function renameEvent(i, newName){
 }
 
 function customFieldRowsHTML(i){
-  return events[i].customFields.map((f,fi)=>
+  return (events[i].customFields || []).map((f,fi)=>
     `<div class="driver-row"><span>${f.label} (${f.type === 'dropdown' ? 'Dropdown' : 'Text'})</span><button class="rm" onclick="removeCustomField(${i},${fi})">✕</button></div>`
   ).join('');
 }
@@ -1560,7 +1625,7 @@ if (lastDriver && [...driverSelect.options].some(o=>o.value===lastDriver)){
 }
 
 function toggleDrawer(id, btn){
-  if ((id === 'driversDrawer' || id === 'eventsDrawer' || id === 'defaultBgDrawer') && !editsUnlocked){
+  if ((id === 'driversDrawer' || id === 'eventsDrawer' || id === 'defaultBgDrawer' || id === 'competitorsDrawer') && !editsUnlocked){
     const attempt = prompt('Enter password to edit:');
     if (attempt === null) return;
     if (attempt !== EDIT_PASSWORD){
@@ -1601,7 +1666,7 @@ function applyImport(){
     const parsed = JSON.parse(decodeURIComponent(escape(atob(raw.replace('TEAMDATA::','')))));
     if (!Array.isArray(parsed.drivers) || !Array.isArray(parsed.events)) throw new Error('bad format');
     drivers = parsed.drivers;
-    events = parsed.events;
+    events = normalizeEvents(parsed.events);
     openEventSettingsIndex = null;
     renderDriverList();
     renderEventList();
@@ -2198,6 +2263,110 @@ function removeRun(n){
 wireRunExtras(1);
 applyLanguage();
 
+// ==================== STOPWATCH ====================
+let swCount = 1;
+const stopwatches = [0,1,2,3].map(()=>({
+  name: '', running: false, startTs: 0, elapsedBefore: 0, laps: []
+}));
+
+function formatSwTime(ms){
+  if (ms < 0) ms = 0;
+  const totalCs = Math.floor(ms / 10);
+  const cs = totalCs % 100;
+  const totalSec = Math.floor(totalCs / 100);
+  const sec = totalSec % 60;
+  const min = Math.floor(totalSec / 60);
+  return `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+}
+
+function swElapsed(sw){
+  return sw.elapsedBefore + (sw.running ? (Date.now() - sw.startTs) : 0);
+}
+
+function renderSwCountButtons(){
+  const wrap = document.getElementById('swCountBtns');
+  wrap.innerHTML = [1,2,3,4].map(n=>
+    `<button class="sw-count-btn ${n===swCount?'active':''}" onclick="setSwCount(${n})">${n}</button>`
+  ).join('');
+}
+
+function setSwCount(n){
+  swCount = n;
+  renderSwCountButtons();
+  renderStopwatchCards();
+}
+
+function renderStopwatchCards(){
+  renderSwCountButtons();
+  const container = document.getElementById('stopwatchList');
+  container.innerHTML = '';
+  for (let i=0; i<swCount; i++){
+    const card = document.createElement('div');
+    card.className = 'sw-card' + (stopwatches[i].running ? ' running' : '');
+    card.id = `swCard_${i}`;
+    card.innerHTML = `
+      <input class="sw-name" id="swName_${i}" placeholder="Driver ${i+1}" value="${stopwatches[i].name}" onchange="stopwatches[${i}].name=this.value">
+      <div class="sw-display" id="swDisplay_${i}">${formatSwTime(swElapsed(stopwatches[i]))}</div>
+      <div class="sw-btn-row">
+        <button class="sw-btn ${stopwatches[i].running ? 'stop' : 'start'}" id="swToggleBtn_${i}" onclick="toggleStopwatch(${i})">${stopwatches[i].running ? 'Stop' : 'Start'}</button>
+        <button class="sw-btn lap" onclick="lapStopwatch(${i})" ${stopwatches[i].running ? '' : 'disabled'}>Lap</button>
+      </div>
+      <div class="sw-laps" id="swLaps_${i}">${swLapsHTML(i)}</div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+function swLapsHTML(i){
+  const laps = stopwatches[i].laps;
+  if (!laps.length) return '';
+  return laps.map((l, idx)=>
+    `<div class="sw-lap-row"><span class="lap-num">L${laps.length-idx}</span><span class="lap-split">${formatSwTime(l.split)}</span><span class="lap-total">${formatSwTime(l.total)}</span></div>`
+  ).join('');
+}
+
+function toggleStopwatch(i){
+  const sw = stopwatches[i];
+  if (sw.running){
+    sw.elapsedBefore = swElapsed(sw);
+    sw.running = false;
+  } else {
+    sw.startTs = Date.now();
+    sw.running = true;
+  }
+  renderStopwatchCards();
+}
+
+function lapStopwatch(i){
+  const sw = stopwatches[i];
+  if (!sw.running) return;
+  const total = swElapsed(sw);
+  const prevTotal = sw.laps.length ? sw.laps[0].total : 0;
+  sw.laps.unshift({split: total - prevTotal, total});
+  renderStopwatchCards();
+}
+
+function resetAllStopwatches(){
+  if (!confirm('Reset all stopwatches? This clears every lap.')) return;
+  stopwatches.forEach(sw=>{
+    sw.running = false;
+    sw.startTs = 0;
+    sw.elapsedBefore = 0;
+    sw.laps = [];
+  });
+  renderStopwatchCards();
+}
+
+setInterval(()=>{
+  if (document.getElementById('tabStopwatch').style.display === 'none') return;
+  stopwatches.forEach((sw, i)=>{
+    if (sw.running){
+      const el = document.getElementById(`swDisplay_${i}`);
+      if (el) el.textContent = formatSwTime(swElapsed(sw));
+    }
+  });
+}, 50);
+
 function validateForm(){
   let valid = true;
   let firstInvalid = null;
@@ -2479,12 +2648,14 @@ const COMP_STORAGE_KEY = 'runreport_competitors_v1';
 let currentCategoryTab = null;
 
 function switchTab(name){
-  const isReport = name === 'report';
-  document.getElementById('tabRunReport').style.display = isReport ? 'block' : 'none';
-  document.getElementById('tabCompetitors').style.display = isReport ? 'none' : 'block';
-  document.getElementById('tabBtn_report').classList.toggle('active', isReport);
-  document.getElementById('tabBtn_competitors').classList.toggle('active', !isReport);
-  if (!isReport) renderCategoryTabs();
+  document.getElementById('tabRunReport').style.display = name === 'report' ? 'block' : 'none';
+  document.getElementById('tabCompetitors').style.display = name === 'competitors' ? 'block' : 'none';
+  document.getElementById('tabStopwatch').style.display = name === 'stopwatch' ? 'block' : 'none';
+  document.getElementById('tabBtn_report').classList.toggle('active', name === 'report');
+  document.getElementById('tabBtn_competitors').classList.toggle('active', name === 'competitors');
+  document.getElementById('tabBtn_stopwatch').classList.toggle('active', name === 'stopwatch');
+  if (name === 'competitors') renderCategoryTabs();
+  if (name === 'stopwatch') renderStopwatchCards();
 }
 
 function saveCompetitors(){
