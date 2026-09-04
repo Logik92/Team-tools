@@ -1,6 +1,6 @@
 {
-  "name": "Run Report",
-  "short_name": "Run Report",
+  "name": "Session Report",
+  "short_name": "Session Report",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

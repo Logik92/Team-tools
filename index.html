@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Run Report</title>
+<title>Session Report</title>
 
 <!-- Add to Home Screen support (iOS + Android) -->
 <link rel="manifest" href="manifest.json">
@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#15181c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Run Report">
+<meta name="apple-mobile-web-app-title" content="Session Report">
 <style>
   :root{
     --asphalt:#15181c;
@@ -255,6 +255,15 @@
   }
   .es-driver-list .tyre-opt{ padding:8px 10px; font-size:12.5px; }
 
+  .langbar{
+    display:flex; gap:8px; margin-bottom:12px;
+  }
+  .langbtn{
+    flex:1; padding:8px; background:var(--panel); border:1px solid var(--line);
+    color:var(--grey); border-radius:6px; font-size:12px; font-weight:600;
+    cursor:pointer;
+  }
+  .langbtn.active{ background:var(--amber); color:#1a1400; border-color:var(--amber); }
   .tabbar{
     display:flex; gap:8px; margin-bottom:18px;
   }
@@ -302,6 +311,13 @@
   .comp-tick{
     width:26px; height:26px; flex-shrink:0; accent-color:var(--amber);
   }
+  .dev-watermark{
+    position:absolute; top:40%; left:50%;
+    transform:translate(-50%, -50%) rotate(-22deg);
+    font-size:26px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
+    color:rgba(255,179,26,0.14);
+    white-space:nowrap; pointer-events:none; user-select:none; z-index:5;
+  }
   .field-invalid{
     border-color:var(--red) !important;
     box-shadow:0 0 0 1px var(--red);
@@ -314,19 +330,24 @@
 <body>
 <div id="bgLayer"></div>
 <div class="board">
+  <div class="langbar">
+    <button class="langbtn active" id="langBtn_en" onclick="setLanguage('en')">🇬🇧 English</button>
+    <button class="langbtn" id="langBtn_it" onclick="setLanguage('it')">🇮🇹 Italiano</button>
+  </div>
+
   <div class="tabbar">
-    <button class="tabbtn active" id="tabBtn_report" onclick="switchTab('report')">📋 Run Report</button>
-    <button class="tabbtn" id="tabBtn_competitors" onclick="switchTab('competitors')">🏎️ Competitor Tyres</button>
+    <button class="tabbtn active" id="tabBtn_report" onclick="switchTab('report')"><span data-i18n="📋 Session Report">📋 Session Report</span></button>
+    <button class="tabbtn" id="tabBtn_competitors" onclick="switchTab('competitors')"><span data-i18n="🏎️ Tyre Tracker">🏎️ Tyre Tracker</span></button>
   </div>
 
   <div id="tabRunReport">
   <div class="header">
-    <h1>Run Report</h1>
+    <h1><span data-i18n="Session Report App Title">Session Report</span></h1>
     <span id="clock"></span>
   </div>
 
   <div class="field">
-    <label><span class="ic">📅</span>Event</label>
+    <label><span class="ic">📅</span><span data-i18n="Event">Event</span></label>
     <select id="eventSelect"></select>
   </div>
 
@@ -338,14 +359,14 @@
   </div>
 
   <div class="field">
-    <label><span class="ic">👤</span>Driver <span id="driverCountLabel" style="color:var(--grey); text-transform:none; letter-spacing:0; font-weight:400;"></span></label>
+    <label><span class="ic">👤</span><span data-i18n="Driver">Driver</span> <span id="driverCountLabel" style="color:var(--grey); text-transform:none; letter-spacing:0; font-weight:400;"></span></label>
     <select id="driverSelect"></select>
   </div>
 
   <div id="manualDriverWrap" style="display:none;">
     <div class="field row2">
       <div>
-        <label><span class="ic">🇬🇧</span>Flag</label>
+        <label><span class="ic">🇬🇧</span><span data-i18n="Flag">Flag</span></label>
         <select id="manualFlag">
           <option value="🇮🇹">🇮🇹 Italy</option>
           <option value="🇬🇧">🇬🇧 UK</option>
@@ -386,14 +407,14 @@
         </select>
       </div>
       <div>
-        <label>Name</label>
+        <label><span data-i18n="Name">Name</span></label>
         <input id="manualName" type="text" placeholder="Guest driver">
       </div>
     </div>
   </div>
 
   <div class="field">
-    <label><span class="ic">🏁</span>Session</label>
+    <label><span class="ic">🏁</span><span data-i18n="Session">Session</span></label>
     <div style="display:flex; align-items:center; gap:10px;">
       <select id="session" class="select-flex">
         <option>Free Practice</option>
@@ -413,21 +434,21 @@
   </div>
 
   <div id="heatWrap" class="field" style="display:none;">
-    <label>Heat</label>
+    <label><span data-i18n="Heat">Heat</span></label>
     <div style="display:flex; align-items:center; gap:10px;">
       <select id="heatFirst" class="select-sm"></select>
-      <span id="heatVsLabel" style="display:none; font-size:12px; color:var(--grey); text-transform:uppercase;">vs</span>
+      <span id="heatVsLabel" style="display:none; font-size:12px; color:var(--grey); text-transform:uppercase;"><span data-i18n="vs">vs</span></span>
       <select id="heatSecond" class="select-sm" style="display:none;"></select>
     </div>
   </div>
 
   <div id="qualWrap" class="field compact-row" style="display:none;">
-    <label>Qualifying Series</label>
+    <label><span data-i18n="Qualifying Series">Qualifying Series</span></label>
     <select id="qualSeries" class="select-sm"></select>
   </div>
 
   <div id="superheatWrap" class="field" style="display:none;">
-    <label>Superheat Group</label>
+    <label><span data-i18n="Superheat Group">Superheat Group</span></label>
     <div class="check-row">
       <label class="tyre-opt"><input type="checkbox" id="superheatA">A</label>
       <label class="tyre-opt"><input type="checkbox" id="superheatB">B</label>
@@ -435,7 +456,7 @@
   </div>
 
   <div id="prefinalWrap" class="field" style="display:none;">
-    <label>Prefinal Group</label>
+    <label><span data-i18n="Prefinal Group">Prefinal Group</span></label>
     <div class="check-row">
       <label class="tyre-opt"><input type="checkbox" id="prefinalA">A</label>
       <label class="tyre-opt"><input type="checkbox" id="prefinalB">B</label>
@@ -447,7 +468,7 @@
       <div class="run-label" id="runLabel_1" style="display:none;">Run 1</div>
 
       <div class="field">
-        <label><span class="ic">🏎️</span>Kart / Chassis</label>
+        <label><span class="ic">🏎️</span><span data-i18n="Kart / Chassis">Kart / Chassis</span></label>
         <select id="chassisPick_1" style="display:none; margin-bottom:8px;"></select>
         <div class="row2" id="chassisManualWrap_1">
           <select id="chassisBrand_1"></select>
@@ -456,7 +477,7 @@
       </div>
 
       <div class="field">
-        <label><span class="ic">⚙️</span>Sprocket (engine) / Axle (rear)</label>
+        <label><span class="ic">⚙️</span><span data-i18n="Sprocket (engine) / Axle (rear)">Sprocket (engine) / Axle (rear)</span></label>
         <div class="row2">
           <select id="sprocket_1"></select>
           <input id="gearRear_1" type="number" inputmode="numeric" placeholder="76">
@@ -465,7 +486,7 @@
       </div>
 
       <div class="field" id="axleWrap_1">
-        <label><span class="ic">🔩</span>Axle Type</label>
+        <label><span class="ic">🔩</span><span data-i18n="Axle Type">Axle Type</span></label>
         <select id="axle_1">
           <option>S</option>
           <option>S1</option>
@@ -480,7 +501,7 @@
       </div>
 
       <div class="field" id="hubWrap_1" style="display:none;">
-        <label><span class="ic">🔘</span>Rear Hubs</label>
+        <label><span class="ic">🔘</span><span data-i18n="Rear Hubs">Rear Hubs</span></label>
         <select id="hub_1">
           <option>Standard (Mag)</option>
           <option>Machine Hubs</option>
@@ -492,18 +513,18 @@
       </div>
 
       <div class="field" id="tyresWrap_1">
-        <label><span class="ic">🛞</span>Tyres</label>
+        <label><span class="ic">🛞</span><span data-i18n="Tyres">Tyres</span></label>
         <div class="tyre-grid">
-          <label class="tyre-opt"><input type="checkbox" id="tyre4new_1">4 New</label>
-          <label class="tyre-opt"><input type="checkbox" id="tyre2newrad_1">2 New (Radiator)</label>
-          <label class="tyre-opt"><input type="checkbox" id="tyreUsed_1">Used</label>
-          <label class="tyre-opt"><input type="checkbox" id="tyre2neweng_1">2 New (Engine)</label>
+          <label class="tyre-opt"><input type="checkbox" id="tyre4new_1"><span data-i18n="4 New">4 New</span></label>
+          <label class="tyre-opt"><input type="checkbox" id="tyre2newrad_1"><span data-i18n="2 New (Radiator)">2 New (Radiator)</span></label>
+          <label class="tyre-opt"><input type="checkbox" id="tyreUsed_1"><span data-i18n="Used">Used</span></label>
+          <label class="tyre-opt"><input type="checkbox" id="tyre2neweng_1"><span data-i18n="2 New (Engine)">2 New (Engine)</span></label>
         </div>
         <input id="tyreAge_1" type="number" inputmode="numeric" placeholder="Tyre age (laps)" style="margin-top:8px; display:none;">
       </div>
 
       <div class="field" id="pressureWrap_1">
-        <label><span class="ic">🛞</span>Tyre pressure — bar (cold @ hot)</label>
+        <label><span class="ic">🛞</span><span data-i18n="Tyre pressure — bar (cold @ hot)">Tyre pressure — bar (cold @ hot)</span></label>
         <div class="row2">
           <input id="pressCold_1" type="text" inputmode="decimal" placeholder="0.50">
           <input id="pressHot_1" type="text" inputmode="decimal" placeholder="1.20">
@@ -511,32 +532,32 @@
       </div>
 
       <div class="field" id="rimTempWrap_1">
-        <label><span class="ic">🌡️</span>Rim Temp (°C)</label>
+        <label><span class="ic">🌡️</span><span data-i18n="Rim Temp (°C)">Rim Temp (°C)</span></label>
         <input id="rimTemp_1" type="number" step="0.5" inputmode="decimal" placeholder="22.5">
-        <div class="note" style="margin-top:4px;">To the nearest 0.5°C — optional</div>
+        <div class="note" style="margin-top:4px;"><span data-i18n="To the nearest 0.5°C — optional">To the nearest 0.5°C — optional</span></div>
       </div>
 
       <div class="field">
-        <label><span class="ic">⏱️</span>Best Time</label>
+        <label><span class="ic">⏱️</span><span data-i18n="Best Time">Best Time</span></label>
         <input id="time_1" type="text" inputmode="decimal" placeholder="47.25">
       </div>
 
       <div id="customFieldsContainer_1"></div>
 
       <div class="field" id="notesWrap_1">
-        <label><span class="ic">📝</span>Notes</label>
+        <label><span class="ic">📝</span><span data-i18n="Notes">Notes</span></label>
         <input id="notes_1" type="text" placeholder="Anything particular with setup…">
       </div>
     </div>
   </div>
 
-  <button class="addrunbtn" onclick="addRun()">+ Add Run</button>
-  <button class="genbtn" onclick="generate()">Generate Report</button>
+  <button class="addrunbtn" onclick="addRun()"><span data-i18n="+ Add Run">+ Add Run</span></button>
+  <button class="genbtn" onclick="generate()"><span data-i18n="Generate Report">Generate Report</span></button>
 
   <div class="output-wrap" id="outputWrap">
     <pre id="output"></pre>
-    <button class="wabtn" onclick="openWhatsApp()">Open in WhatsApp</button>
-    <button class="copybtn" id="copyBtn" onclick="copyOutput()">Copy instead</button>
+    <button class="wabtn" onclick="openWhatsApp()"><span data-i18n="Open in WhatsApp">Open in WhatsApp</span></button>
+    <button class="copybtn" id="copyBtn" onclick="copyOutput()"><span data-i18n="Copy instead">Copy instead</span></button>
   </div>
 
   <hr class="divider">
@@ -573,6 +594,7 @@
   </button>
   <div class="drawer" id="driversDrawer">
     <div id="driverList"></div>
+    <div class="note" id="driverListSummary" style="text-align:center; margin:6px 0 4px;"></div>
     <input id="newDriverName" type="text" placeholder="Driver name" autocapitalize="words" style="margin-bottom:8px;">
     <div class="addrow" style="grid-template-columns:1fr 90px 44px;">
       <select id="newDriverFlag">
@@ -648,7 +670,8 @@
   <div class="hint">Chassis numbers are remembered per driver for this session — pick the driver again and it auto-fills. Export the roster occasionally to back it up, since it resets if the page is closed.</div>
   </div>
 
-  <div id="tabCompetitors" style="display:none;">
+  <div id="tabCompetitors" style="display:none; position:relative; overflow:hidden;">
+    <div class="dev-watermark">In Development</div>
     <div class="cat-tabbar" id="categoryTabbar"></div>
 
     <div class="comp-filter-row">
@@ -708,7 +731,8 @@ let drivers = [
 function defaultEventSettings(){
   return { fp:20, heatLetters:7, prefinal:true, superheat:true, repechage:false,
     showWarmup:true, showHeat:true, showQualifying:true, showFinal:true, fpOnly:false,
-    okjMin:10, okjMax:14, kzMin:10, kzMax:14, sprocketDefault:12, kzSprocketDefault:10,
+    okjMin:10, okjMax:14, kzMin:10, kzMax:14,
+    sprocketDefaults:{OK:12, OKJ:12, OKN:12, OKNJ:12}, kzSprocketDefault:10,
     rearDefaultOkj:76, rearDefaultKz:76,
     customFields:[], bgImage:null, qualMode:'series', qualSeriesCount:5,
     warmupCount:2, chassisBrands:['KR1','KR2'],
@@ -762,6 +786,73 @@ function loadDefaultBg(){
   } catch(e){}
 }
 loadDefaultBg();
+
+// ---- language (EN/IT) ----
+// Covers the fields mechanics fill in every run. Deeper admin/settings
+// screens (event ⚙ config, driver list management, Tyre Tracker details)
+// stay English-only for now.
+const I18N_IT = {
+  "📋 Session Report": "📋 Rapporto Sessione",
+  "🏎️ Tyre Tracker": "🏎️ Monitoraggio Gomme",
+  "Session Report App Title": "Rapporto Sessione",
+  "Event": "Evento",
+  "Driver": "Pilota",
+  "Flag": "Bandiera",
+  "Name": "Nome",
+  "Session": "Sessione",
+  "Heat": "Batteria",
+  "Qualifying Series": "Serie Qualifica",
+  "Superheat Group": "Gruppo Superheat",
+  "Prefinal Group": "Gruppo Prefinale",
+  "vs": "vs",
+  "Kart / Chassis": "Kart / Telaio",
+  "Sprocket (engine) / Axle (rear)": "Pignone (motore) / Asse (posteriore)",
+  "Axle Type": "Tipo Assale",
+  "Rear Hubs": "Mozzi Posteriori",
+  "Tyres": "Gomme",
+  "4 New": "4 Nuove",
+  "2 New (Radiator)": "2 Nuove (Radiatore)",
+  "2 New (Engine)": "2 Nuove (Motore)",
+  "Used": "Usate",
+  "Tyre pressure — bar (cold @ hot)": "Pressione gomme — bar (fredda @ calda)",
+  "Rim Temp (°C)": "Temperatura Cerchio (°C)",
+  "To the nearest 0.5°C — optional": "Al più vicino 0.5°C — facoltativo",
+  "Best Time": "Miglior Tempo",
+  "Notes": "Note",
+  "+ Add Run": "+ Aggiungi Turno",
+  "Generate Report": "Genera Report",
+  "Open in WhatsApp": "Apri in WhatsApp",
+  "Copy instead": "Copia invece"
+};
+
+let currentLang = 'en';
+function saveLang(){
+  try{ localStorage.setItem('runreport_lang_v1', currentLang); } catch(e){}
+}
+function loadLang(){
+  try{
+    const raw = localStorage.getItem('runreport_lang_v1');
+    if (raw === 'it' || raw === 'en') currentLang = raw;
+  } catch(e){}
+}
+loadLang();
+
+function applyLanguage(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    el.textContent = (currentLang === 'it' && I18N_IT[key]) ? I18N_IT[key] : key;
+  });
+  const enBtn = document.getElementById('langBtn_en');
+  const itBtn = document.getElementById('langBtn_it');
+  if (enBtn) enBtn.classList.toggle('active', currentLang === 'en');
+  if (itBtn) itBtn.classList.toggle('active', currentLang === 'it');
+}
+
+function setLanguage(lang){
+  currentLang = lang;
+  saveLang();
+  applyLanguage();
+}
 
 // ---- Firebase bridge ----
 // window.__saveToFirebase / __subscribeFirebase are set up by the module script
@@ -921,6 +1012,8 @@ function renderDriverSelect(ev){
   other.value = '__other';
   other.textContent = '🏁 Other / Guest';
   driverSelect.appendChild(other);
+  const countLabel = document.getElementById('driverCountLabel');
+  if (countLabel) countLabel.textContent = `(${filtered.length} available for this event)`;
   if ([...driverSelect.options].some(o=>o.value===prev)){
     driverSelect.value = prev;
   } else if (filtered.length){
@@ -931,10 +1024,10 @@ function renderDriverSelect(ev){
 
 function updateDriverCount(){
   const n = drivers.length;
-  const label1 = document.getElementById('driverCountLabel');
   const label2 = document.getElementById('driverCountLabel2');
-  if (label1) label1.textContent = `(${n} loaded)`;
-  if (label2) label2.textContent = `(${n})`;
+  const summary = document.getElementById('driverListSummary');
+  if (label2) label2.textContent = `(${n} total)`;
+  if (summary) summary.textContent = `${n} driver${n === 1 ? '' : 's'} total in the roster`;
 }
 
 function renderDriverList(){
@@ -1105,7 +1198,7 @@ function renderEventList(){
           <input type="checkbox" ${ev.showWarmup ? 'checked' : ''} onchange="updateEventSetting(${i},'showWarmup',this.checked)">
         </div>
         <div class="es-row">
-          <label>Heat</label>
+          <label><span data-i18n="Heat">Heat</span></label>
           <input type="checkbox" ${ev.showHeat ? 'checked' : ''} onchange="updateEventSetting(${i},'showHeat',this.checked)">
         </div>
         <div class="es-row">
@@ -1161,13 +1254,11 @@ function renderEventList(){
           </div>
         </div>
         <div class="es-row">
-          <label>Default sprocket (pignon) — Direct Drive</label>
-          <input type="number" value="${ev.sprocketDefault}" onchange="updateEventSetting(${i},'sprocketDefault',this.value,true)">
-        </div>
-        <div class="es-row">
           <label>Rear axle default — Direct Drive</label>
           <input type="number" value="${ev.rearDefaultOkj}" onchange="updateEventSetting(${i},'rearDefaultOkj',this.value,true)">
         </div>
+        <div class="es-sub">Default sprocket (pignon) per category — only categories currently on the driver list show here</div>
+        <div id="sprocketDefaultsList_${i}">${sprocketDefaultRowsHTML(i)}</div>
         <div class="es-sub">KZ sprocket range</div>
         <div class="es-row">
           <div class="es-range">
@@ -1250,6 +1341,29 @@ function toggleEventSettings(i){
 function isDriverAllowed(ev, name){
   if (!ev.eventDrivers || ev.eventDrivers.length === 0) return true;
   return ev.eventDrivers.includes(name);
+}
+
+function sprocketDefaultRowsHTML(i){
+  const ev = events[i];
+  const cats = categoriesInUse();
+  if (!cats.length){
+    return `<div class="note">No driver categories set yet — assign categories in "Edit driver list" to configure per-category sprocket defaults.</div>`;
+  }
+  if (!ev.sprocketDefaults) ev.sprocketDefaults = {};
+  return cats.map(cat=>{
+    const val = ev.sprocketDefaults[cat] !== undefined ? ev.sprocketDefaults[cat] : (ev.sprocketDefault || 12);
+    return `<div class="es-row">
+      <label>${cat}</label>
+      <input type="number" value="${val}" onchange="updateSprocketDefaultForCategory(${i}, '${cat}', this.value)">
+    </div>`;
+  }).join('');
+}
+
+function updateSprocketDefaultForCategory(i, category, value){
+  if (!events[i].sprocketDefaults) events[i].sprocketDefaults = {};
+  events[i].sprocketDefaults[category] = Number(value);
+  if (eventSelect.value === events[i].name) applyEventSettings(events[i]);
+  saveTeamData();
 }
 
 function driverAvailabilityRowsHTML(i){
@@ -1673,6 +1787,18 @@ function refreshSessionOptions(ev){
 // ---- sprocket options rebuilt from event settings + current driver's category ----
 // KZ drivers use the KZ (gearbox) sprocket range; every other category (OK/OKJ/OKN/OKNJ)
 // uses the Direct Drive range. Unknown/guest driver falls back to a combined range.
+const DIRECT_DRIVE_CATEGORIES = ['OK','OKJ','OKN','OKNJ'];
+
+function categoriesInUse(){
+  return DIRECT_DRIVE_CATEGORIES.filter(cat=>drivers.some(d=>d.category===cat));
+}
+
+function sprocketDefaultFor(ev, cat){
+  if (cat === 'KZ') return ev.kzSprocketDefault;
+  if (ev.sprocketDefaults && ev.sprocketDefaults[cat] !== undefined) return ev.sprocketDefaults[cat];
+  return ev.sprocketDefault || 12; // fallback for events saved before this was per-category
+}
+
 function currentDriverCategory(){
   const driver = drivers.find(d=>d.name === driverSelect.value);
   return driver ? driver.category : '';
@@ -1703,7 +1829,7 @@ function populateSprocketSelect(sel, min, max, defaultVal){
 function refreshAllSprocketDropdowns(ev){
   const [min, max] = sprocketRangeFor(ev);
   const cat = currentDriverCategory();
-  const defaultVal = cat === 'KZ' ? ev.kzSprocketDefault : ev.sprocketDefault;
+  const defaultVal = sprocketDefaultFor(ev, cat);
   document.querySelectorAll('.run-block').forEach(block=>{
     const n = block.dataset.run;
     const sel = document.getElementById(`sprocket_${n}`);
@@ -1801,7 +1927,7 @@ function runFieldsHTML(n){
   return `
     <div class="run-label" id="runLabel_${n}">Run ${n}<button class="rm" onclick="removeRun(${n})">✕ remove</button></div>
     <div class="field">
-      <label><span class="ic">🏎️</span>Kart / Chassis</label>
+      <label><span class="ic">🏎️</span><span data-i18n="Kart / Chassis">Kart / Chassis</span></label>
       <select id="chassisPick_${n}" style="display:none; margin-bottom:8px;"></select>
       <div class="row2" id="chassisManualWrap_${n}">
         <select id="chassisBrand_${n}"></select>
@@ -1809,7 +1935,7 @@ function runFieldsHTML(n){
       </div>
     </div>
     <div class="field">
-      <label><span class="ic">⚙️</span>Sprocket (engine) / Axle (rear)</label>
+      <label><span class="ic">⚙️</span><span data-i18n="Sprocket (engine) / Axle (rear)">Sprocket (engine) / Axle (rear)</span></label>
       <div class="row2">
         <select id="sprocket_${n}"></select>
         <input id="gearRear_${n}" type="number" inputmode="numeric" placeholder="76">
@@ -1817,7 +1943,7 @@ function runFieldsHTML(n){
       <input id="sprocketCustom_${n}" type="text" placeholder="Type sprocket size" style="margin-top:8px; display:none;">
     </div>
     <div class="field" id="axleWrap_${n}">
-      <label><span class="ic">🔩</span>Axle Type</label>
+      <label><span class="ic">🔩</span><span data-i18n="Axle Type">Axle Type</span></label>
       <select id="axle_${n}">
         <option>S</option><option>S1</option><option>S2</option><option selected>M</option>
         <option>H1</option><option>H</option><option>HH</option>
@@ -1826,7 +1952,7 @@ function runFieldsHTML(n){
       <input id="axleCustom_${n}" type="text" placeholder="Type axle type" style="margin-top:8px; display:none;">
     </div>
     <div class="field" id="hubWrap_${n}" style="display:none;">
-      <label><span class="ic">🔘</span>Rear Hubs</label>
+      <label><span class="ic">🔘</span><span data-i18n="Rear Hubs">Rear Hubs</span></label>
       <select id="hub_${n}">
         <option>Standard (Mag)</option>
         <option>Machine Hubs</option>
@@ -1837,34 +1963,34 @@ function runFieldsHTML(n){
       <input id="hubCustom_${n}" type="text" placeholder="Type hub type" style="margin-top:8px; display:none;">
     </div>
     <div class="field" id="tyresWrap_${n}">
-      <label><span class="ic">🛞</span>Tyres</label>
+      <label><span class="ic">🛞</span><span data-i18n="Tyres">Tyres</span></label>
       <div class="tyre-grid">
-        <label class="tyre-opt"><input type="checkbox" id="tyre4new_${n}">4 New</label>
-        <label class="tyre-opt"><input type="checkbox" id="tyre2newrad_${n}">2 New (Radiator)</label>
-        <label class="tyre-opt"><input type="checkbox" id="tyreUsed_${n}">Used</label>
-        <label class="tyre-opt"><input type="checkbox" id="tyre2neweng_${n}">2 New (Engine)</label>
+        <label class="tyre-opt"><input type="checkbox" id="tyre4new_${n}"><span data-i18n="4 New">4 New</span></label>
+        <label class="tyre-opt"><input type="checkbox" id="tyre2newrad_${n}"><span data-i18n="2 New (Radiator)">2 New (Radiator)</span></label>
+        <label class="tyre-opt"><input type="checkbox" id="tyreUsed_${n}"><span data-i18n="Used">Used</span></label>
+        <label class="tyre-opt"><input type="checkbox" id="tyre2neweng_${n}"><span data-i18n="2 New (Engine)">2 New (Engine)</span></label>
       </div>
       <input id="tyreAge_${n}" type="number" inputmode="numeric" placeholder="Tyre age (laps)" style="margin-top:8px; display:none;">
     </div>
     <div class="field" id="pressureWrap_${n}">
-      <label><span class="ic">🛞</span>Tyre pressure — bar (cold @ hot)</label>
+      <label><span class="ic">🛞</span><span data-i18n="Tyre pressure — bar (cold @ hot)">Tyre pressure — bar (cold @ hot)</span></label>
       <div class="row2">
         <input id="pressCold_${n}" type="text" inputmode="decimal" placeholder="0.50">
         <input id="pressHot_${n}" type="text" inputmode="decimal" placeholder="1.20">
       </div>
     </div>
     <div class="field" id="rimTempWrap_${n}">
-      <label><span class="ic">🌡️</span>Rim Temp (°C)</label>
+      <label><span class="ic">🌡️</span><span data-i18n="Rim Temp (°C)">Rim Temp (°C)</span></label>
       <input id="rimTemp_${n}" type="number" step="0.5" inputmode="decimal" placeholder="22.5">
-      <div class="note" style="margin-top:4px;">To the nearest 0.5°C — optional</div>
+      <div class="note" style="margin-top:4px;"><span data-i18n="To the nearest 0.5°C — optional">To the nearest 0.5°C — optional</span></div>
     </div>
     <div class="field">
-      <label><span class="ic">⏱️</span>Best Time</label>
+      <label><span class="ic">⏱️</span><span data-i18n="Best Time">Best Time</span></label>
       <input id="time_${n}" type="text" inputmode="decimal" placeholder="47.25">
     </div>
     <div id="customFieldsContainer_${n}"></div>
     <div class="field" id="notesWrap_${n}">
-      <label><span class="ic">📝</span>Notes</label>
+      <label><span class="ic">📝</span><span data-i18n="Notes">Notes</span></label>
       <input id="notes_${n}" type="text" placeholder="Anything particular with setup…">
     </div>`;
 }
@@ -2024,7 +2150,7 @@ function wireRunExtras(n){
   populateChassisPicker(n);
   const [min, max] = sprocketRangeFor(currentEventSettings);
   const cat = currentDriverCategory();
-  const sprocketDef = cat === 'KZ' ? currentEventSettings.kzSprocketDefault : currentEventSettings.sprocketDefault;
+  const sprocketDef = sprocketDefaultFor(currentEventSettings, cat);
   populateSprocketSelect(document.getElementById(`sprocket_${n}`), min, max, sprocketDef);
   const rearInput = document.getElementById(`gearRear_${n}`);
   if (rearInput) rearInput.placeholder = cat === 'KZ' ? currentEventSettings.rearDefaultKz : currentEventSettings.rearDefaultOkj;
@@ -2056,6 +2182,7 @@ function addRun(){
   document.getElementById('runsContainer').appendChild(block);
   wireRunExtras(n);
   document.getElementById('runLabel_1').style.display = 'flex';
+  applyLanguage();
   block.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
@@ -2069,6 +2196,7 @@ function removeRun(n){
 }
 
 wireRunExtras(1);
+applyLanguage();
 
 function validateForm(){
   let valid = true;
@@ -2318,7 +2446,11 @@ function copyOutput(){
   const done = ()=>{
     btn.textContent = 'Copied ✓';
     btn.classList.add('copied');
-    setTimeout(()=>{ btn.textContent = 'Copy instead'; btn.classList.remove('copied'); }, 1600);
+    setTimeout(()=>{
+      btn.innerHTML = '<span data-i18n="Copy instead"></span>';
+      btn.classList.remove('copied');
+      applyLanguage();
+    }, 1600);
   };
   if (navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text, done));
