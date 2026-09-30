@@ -393,6 +393,13 @@
       <div class="field"><label class="f-label" data-i18n="common.shortName">Short name</label><input type="text" id="newCustShortName" placeholder="For buttons" data-i18n-placeholder="admin.clients.shortNamePlaceholder" style="width:120px;"></div>
       <button class="btn" id="addCustomerBtn" data-i18n="admin.clients.addBtn">Add client</button>
     </div>
+    <div class="inline-form">
+      <div class="csv-actions">
+        <button class="btn ghost" id="importClientsBtn" data-i18n="common.importCsv">Import CSV</button>
+        <button class="btn ghost" id="exportClientsBtn" data-i18n="common.exportCsv">Export CSV</button>
+      </div>
+    </div>
+    <div class="security-note" style="margin-bottom:12px;" data-i18n="admin.clients.csvNote">The client CSV includes each logo inside the file, so one file backs up everything. Importing adds new clients and updates existing ones (matched by ID, then by name). It never deletes anyone, and an empty logo cell keeps the current logo.</div>
     <div style="overflow-x:auto;">
     <table class="data-table"><thead><tr><th data-i18n="admin.clients.thLogo">Logo</th><th data-i18n="common.name">Name</th><th data-i18n="common.shortName">Short name</th><th data-i18n="common.email">Email</th><th data-i18n="common.address">Address</th><th></th></tr></thead><tbody id="customerTableBody"></tbody></table>
     </div>
@@ -614,6 +621,10 @@ const I18N = {
     'admin.clients.shortNamePlaceholder': 'For buttons',
     'admin.clients.shortNamePrompt': 'Nickname (shown on buttons, optional):',
     'admin.clients.addBtn': 'Add client',
+    'admin.clients.csvNote': 'The client CSV includes each logo inside the file, so one file backs up everything. Importing adds new clients and updates existing ones (matched by ID, then by name). It never deletes anyone, and an empty logo cell keeps the current logo.',
+    'admin.clients.csvImported': 'Clients imported: {added} added, {updated} updated.',
+    'admin.clients.csvNone': 'No clients to export yet.',
+    'admin.clients.csvBad': 'That file has no "name" column — nothing imported.',
     'admin.clients.thLogo': 'Logo',
     'admin.clients.logoBtn': 'Logo',
     'admin.clients.editPrompt': 'Client name:',
@@ -792,6 +803,10 @@ const I18N = {
     'admin.clients.shortNamePlaceholder': 'Per i pulsanti',
     'admin.clients.shortNamePrompt': 'Soprannome (mostrato sui pulsanti, opzionale):',
     'admin.clients.addBtn': 'Aggiungi cliente',
+    'admin.clients.csvNote': 'Il CSV dei clienti contiene anche i loghi all’interno del file, quindi un solo file salva tutto. L’importazione aggiunge i nuovi clienti e aggiorna quelli esistenti (per ID, poi per nome). Non elimina mai nessuno e una cella logo vuota mantiene il logo attuale.',
+    'admin.clients.csvImported': 'Clienti importati: {added} aggiunti, {updated} aggiornati.',
+    'admin.clients.csvNone': 'Nessun cliente da esportare.',
+    'admin.clients.csvBad': 'Il file non ha la colonna "name" — nulla importato.',
     'admin.clients.thLogo': 'Logo',
     'admin.clients.logoBtn': 'Logo',
     'admin.clients.editPrompt': 'Nome cliente:',
@@ -1848,6 +1863,38 @@ document.querySelectorAll('.admin-menu-tile').forEach(tile=>{
 document.querySelectorAll('.admin-sub-back').forEach(btn=>{
   btn.onclick = ()=> switchView('view-admin');
 });
+function exportClientsCsv(){
+  if(!db.customers.length){ showToast(t('admin.clients.csvNone'), true); return; }
+  // logos are stored as small data-URL images; they travel inside the CSV so one file is a full backup
+  downloadCsv(db.customers.map(c=>({id:c.id, name:c.name, shortName:c.shortName||'', email:c.email||'', address:c.address||'', logo:c.logo||''})), `clients_${todayStr()}.csv`);
+}
+async function importClientsCsv(){
+  const rows = await pickCsvFile();
+  if(!rows) return;
+  if(!rows.length || !('name' in rows[0])){ showToast(t('admin.clients.csvBad'), true); return; }
+  let added = 0, updated = 0;
+  rows.forEach(r=>{
+    const name = (r.name||'').trim();
+    if(!name) return;
+    const id = (r.id||'').trim();
+    let c = (id && db.customers.find(x=>x.id===id)) || db.customers.find(x=>x.name.trim().toLowerCase()===name.toLowerCase());
+    if(c){ updated++; } else {
+      c = {id: id || ('c'+Date.now()+Math.random().toString(36).slice(2,6)), name};
+      db.customers.push(c); added++;
+    }
+    c.name = name;
+    if(r.shortName!==undefined) c.shortName = (r.shortName||'').trim();
+    if(r.email!==undefined) c.email = (r.email||'').trim();
+    if(r.address!==undefined) c.address = (r.address||'').trim();
+    const logo = (r.logo||'').trim();
+    if(/^data:image\//.test(logo)) c.logo = logo;
+  });
+  await saveDb();
+  renderCustomerTable();
+  showToast(t('admin.clients.csvImported', {added, updated}));
+}
+document.getElementById('exportClientsBtn').onclick = exportClientsCsv;
+document.getElementById('importClientsBtn').onclick = importClientsCsv;
 function renderCustomerTable(){
   const body = document.getElementById('customerTableBody');
   body.innerHTML = '';
