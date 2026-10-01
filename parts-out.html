@@ -180,6 +180,11 @@
   .modal-actions .danger{background:transparent;border:1px solid #b92630;color:#ff6b6b;}
   #invAddBtn{margin-right:8px;}
   .guest-row .btn + .btn{margin-top:8px;}
+ .log-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);}
+  .log-main{flex:1;min-width:0;}
+  .log-name{font-size:13.5px;line-height:1.3;}
+  .log-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .log-qty{font-family:'Oswald';font-weight:700;font-size:16px;color:var(--accent);min-width:34px;text-align:right;}
   .qty-minus{position:absolute;top:6px;left:6px;background:var(--surface);border:1px solid var(--line);color:var(--text);width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4);}
   .no-results{grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--text-dim);}
 
@@ -348,6 +353,7 @@
       <div class="recipient-info">
         <div class="recipient-tag" id="recipientTag">&mdash;</div>
       </div>
+      <button class="btn ghost" id="logBtn" style="display:none;padding:8px 12px;font-size:13px;margin-right:8px;" data-i18n="log.btn">Logged</button>
       <div class="lang-toggle" id="langToggle">
         <button data-lang="en">EN</button>
         <button data-lang="it" class="active">IT</button>
@@ -554,6 +560,12 @@ const I18N = {
     'home.guestBtn': 'Parts Browser',
     'home.driverNoEvent': 'No active event \u2014 ask an admin to open one.',
     'home.noDriversInEvent': 'No drivers were added to this event. Ask an admin to edit the event.',
+    'log.btn': 'Logged',
+    'log.title': 'Logged for {name}',
+    'log.empty': 'Nothing logged for this recipient in this event yet.',
+    'log.close': 'Close',
+    'log.removeConfirm': 'Remove {qty} × {name} from {who}? This undoes it in the event report and the usage ranking.',
+    'log.removed': 'Removed: {name}',
     'home.inventoryBtn': 'Inventory',
     'inv.title': 'Inventory',
     'inv.itemsCounted': 'in stock',
@@ -766,6 +778,12 @@ const I18N = {
     'home.guestBtn': 'Sfoglia ricambi',
     'home.driverNoEvent': 'Nessun evento attivo \u2014 chiedi a un admin di aprirne uno.',
     'home.noDriversInEvent': 'Nessun pilota \u00e8 stato aggiunto a questo evento. Chiedi a un admin di modificare l\u2019evento.',
+    'log.btn': 'Registrati',
+    'log.title': 'Registrati per {name}',
+    'log.empty': 'Nessun articolo registrato per questo destinatario in questo evento.',
+    'log.close': 'Chiudi',
+    'log.removeConfirm': 'Rimuovere {qty} × {name} da {who}? Viene annullato anche nel report dell’evento e nella classifica di utilizzo.',
+    'log.removed': 'Rimosso: {name}',
     'home.inventoryBtn': 'Inventario',
     'inv.title': 'Inventario',
     'inv.itemsCounted': 'in stock',
@@ -1584,6 +1602,7 @@ function openCatalog(recipient){
   cat.invOnly = false;
   if(isGroup){ const ty = SEED.cats.find(c=>c.en==='Tyres'); if(ty) cat.catFilter = ty.id; }
   document.getElementById('chips').style.display = '';
+  document.getElementById('logBtn').style.display = (session.user && session.user.role==='admin' && currentEvent() && (recipient.type==='driver' || recipient.type==='customer')) ? '' : 'none';
   document.getElementById('searchInput').value = '';
   document.getElementById('recipientTag').textContent = recipient.name;
   renderChips();
@@ -2046,6 +2065,49 @@ document.getElementById('confirmBtn').onclick = async ()=>{
   cat.cart = {}; cat.chassis = {}; cat.opts = {}; cat.priceRevealed = false;
   renderGrid(); renderConfirmBar();
 };
+
+/* ================= ADMIN: remove single logged articles for a driver / client ================= */
+function recipientEntries(ev){
+  const r = cat.recipient;
+  return (ev.entries||[]).filter(en=> en.recipientType===r.type && (r.type==='customer' ? en.recipientId===r.id : en.recipientName===r.name))
+    .sort((a,b)=>b.ts-a.ts);
+}
+function openLoggedModal(){
+  const ev = currentEvent();
+  const box = document.getElementById('modalBox');
+  if(!ev || !session.user || session.user.role!=='admin') return;
+  const list = recipientEntries(ev);
+  box.innerHTML = `
+    <div class="modal-title">${escapeHtml(t('log.title',{name:cat.recipient.name}))}</div>
+    <div class="modal-list" id="logList"></div>
+    <div class="modal-actions"><button class="btn" id="logClose">${t('log.close')}</button></div>`;
+  document.getElementById('modalOverlay').style.display = 'flex';
+  document.getElementById('logClose').onclick = closeModal;
+  const wrap = document.getElementById('logList');
+  if(!list.length){ wrap.innerHTML = `<div class="empty-note">${t('log.empty')}</div>`; return; }
+  list.forEach(en=>{
+    const p = getPart(en.partId);
+    const nm = p ? pname(p) : '?';
+    const when = new Date(en.ts).toLocaleString(uiLang==='it'?'it-IT':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const extra = [p&&p.c?p.c:'', en.chassisNo?('#'+en.chassisNo):'', en.note||'', en.group||'', en.staff||'', when].filter(Boolean).join(' \u00b7 ');
+    const row = document.createElement('div'); row.className = 'log-row';
+    row.innerHTML = `<div class="log-qty">${en.qty}\u00d7</div><div class="log-main"><div class="log-name">${escapeHtml(nm)}</div><div class="log-meta">${escapeHtml(extra)}</div></div><button class="tile-del" title="${escapeHtml(t('common.remove'))}">&#10005;</button>`;
+    row.querySelector('button').onclick = async ()=>{
+      if(!confirm(t('log.removeConfirm',{qty:en.qty, name:nm, who:cat.recipient.name}))) return;
+      // find the same entry in the live db (the shared doc is re-read after every save, so match by content, not by reference)
+      const idx = ev.entries.findIndex(x=>x.ts===en.ts && x.partId===en.partId && x.recipientId===en.recipientId && x.qty===en.qty && x.chassisNo===en.chassisNo && x.note===en.note);
+      if(idx<0) return;
+      ev.entries.splice(idx,1);
+      if(p){ const k = pkey(p); const next = (db.partUsageCounts[k]||0) - en.qty; if(next>0) db.partUsageCounts[k] = next; else delete db.partUsageCounts[k]; }
+      await saveDb();
+      showToast(t('log.removed',{name:nm}));
+      openLoggedModal();
+      renderGrid();
+    };
+    wrap.appendChild(row);
+  });
+}
+document.getElementById('logBtn').onclick = openLoggedModal;
 
 /* ================= INVENTORY (stock in the truck) ================= */
 function invQty(p){ const r = db.inventory && db.inventory[pkey(p)]; return r ? r.qty : 0; }
