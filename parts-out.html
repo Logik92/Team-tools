@@ -502,6 +502,8 @@
       </div>
     </div>
     <div class="security-note" style="margin-bottom:12px;" data-i18n="admin.products.securityNote">Editing here updates price/name overrides stored in the app and reflected in the exported CSV. It does not write back to your live store &mdash; re-upload the exported CSV there yourself to sync it.</div>
+    <div class="edit-bar"><button class="btn" id="addProductBtn" data-i18n="prod.addBtn">+ New product</button></div>
+    <div id="customProdWrap" style="margin-bottom:14px;"></div>
     <div id="productTableWrap"></div>
     <div style="margin-top:26px;">
       <div class="inline-form" style="align-items:center;">
@@ -560,6 +562,23 @@ const I18N = {
     'home.guestBtn': 'Parts Browser',
     'home.driverNoEvent': 'No active event \u2014 ask an admin to open one.',
     'home.noDriversInEvent': 'No drivers were added to this event. Ask an admin to edit the event.',
+    'prod.addBtn': '+ New product',
+    'prod.title': 'New product',
+    'prod.editTitle': 'Edit product',
+    'prod.photo': 'Photo',
+    'prod.choosePhoto': 'Choose photo',
+    'prod.sku': 'SKU / code',
+    'prod.nameEn': 'Name (English)',
+    'prod.nameIt': 'Name (Italian)',
+    'prod.category': 'Category',
+    'prod.price': 'Price (€)',
+    'prod.nameRequired': 'Enter a name in at least one language.',
+    'prod.skuDup': 'This SKU already exists: {name}.',
+    'prod.saved': 'Product saved: {name}',
+    'prod.deleted': 'Product deleted: {name}',
+    'prod.deleteConfirm': 'Delete "{name}" from the catalog? Items already logged stay in past reports as unnamed lines, so only delete products nobody has taken yet.',
+    'prod.myTitle': 'Products added in the app ({n})',
+    'prod.edit': 'Edit',
     'log.btn': 'Logged',
     'log.title': 'Logged for {name}',
     'log.empty': 'Nothing logged for this recipient in this event yet.',
@@ -778,6 +797,23 @@ const I18N = {
     'home.guestBtn': 'Sfoglia ricambi',
     'home.driverNoEvent': 'Nessun evento attivo \u2014 chiedi a un admin di aprirne uno.',
     'home.noDriversInEvent': 'Nessun pilota \u00e8 stato aggiunto a questo evento. Chiedi a un admin di modificare l\u2019evento.',
+    'prod.addBtn': '+ Nuovo prodotto',
+    'prod.title': 'Nuovo prodotto',
+    'prod.editTitle': 'Modifica prodotto',
+    'prod.photo': 'Foto',
+    'prod.choosePhoto': 'Scegli foto',
+    'prod.sku': 'SKU / codice',
+    'prod.nameEn': 'Nome (inglese)',
+    'prod.nameIt': 'Nome (italiano)',
+    'prod.category': 'Categoria',
+    'prod.price': 'Prezzo (€)',
+    'prod.nameRequired': 'Inserisci un nome in almeno una lingua.',
+    'prod.skuDup': 'Questo SKU esiste già: {name}.',
+    'prod.saved': 'Prodotto salvato: {name}',
+    'prod.deleted': 'Prodotto eliminato: {name}',
+    'prod.deleteConfirm': 'Eliminare "{name}"? Viene rimosso dal catalogo.',
+    'prod.myTitle': 'Prodotti aggiunti nell’app ({n})',
+    'prod.edit': 'Modifica',
     'log.btn': 'Registrati',
     'log.title': 'Registrati per {name}',
     'log.empty': 'Nessun articolo registrato per questo destinatario in questo evento.',
@@ -1024,6 +1060,15 @@ const skuToPartId = {};
 SEED.parts.forEach(p => { partBaseById[p.id] = p; if(p.c) skuToPartId[p.c] = p.id; });
 function pname(p){ return p[uiLang] || p.it || p.en || ''; }
 function pkey(p){ return p.c || ('#'+p.id); } // override/usage/deleted key: SKU, or '#id' for the few parts without one (chassis frames)
+function syncCustomParts(){
+  // products added by admins live in db.customParts and are merged into the catalog arrays
+  for(let i=SEED.parts.length-1;i>=0;i--){ if(SEED.parts[i].custom){ delete partBaseById[SEED.parts[i].id]; SEED.parts.splice(i,1); } }
+  Object.keys(skuToPartId).forEach(k=>{ if(String(skuToPartId[k]).startsWith('x')) delete skuToPartId[k]; });
+  ((db && db.customParts) || []).forEach(p=>{
+    const part = {...p, custom:true, cur:'EUR'};
+    SEED.parts.push(part); partBaseById[part.id] = part; if(part.c) skuToPartId[part.c] = part.id;
+  });
+}
 function getPart(id){
   const base = partBaseById[id];
   if(!base) return null;
@@ -2109,6 +2154,78 @@ function openLoggedModal(){
 }
 document.getElementById('logBtn').onclick = openLoggedModal;
 
+/* ================= ADMIN: add / edit own products ================= */
+function openProductModal(existing){
+  const box = document.getElementById('modalBox');
+  let photo = existing ? existing.img||'' : '';
+  const cats = [...SEED.cats].sort((a,b)=>a[uiLang].localeCompare(b[uiLang]));
+  box.innerHTML = `
+    <div class="modal-title">${escapeHtml(t(existing?'prod.editTitle':'prod.title'))}</div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.photo'))}</label>
+      <div style="display:flex;align-items:center;gap:12px;"><img id="prodPhotoPrev" style="width:72px;height:72px;object-fit:cover;border-radius:8px;background:#1e2224;${photo?'':'visibility:hidden;'}" ${photo?`src="${photo}"`:''}>
+      <button class="btn ghost" id="prodPhotoBtn" type="button">${escapeHtml(t('prod.choosePhoto'))}</button></div>
+      <input type="file" id="prodPhotoFile" accept="image/*" style="display:none;"></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.sku'))}</label><input type="text" id="prodSku" value="${escapeHtml(existing?existing.c||'':'')}" autocapitalize="characters"></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.nameEn'))}</label><input type="text" id="prodEn" value="${escapeHtml(existing?existing.en||'':'')}"></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.nameIt'))}</label><input type="text" id="prodIt" value="${escapeHtml(existing?existing.it||'':'')}"></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.category'))}</label><select id="prodCat" style="width:100%;font-size:16px;padding:10px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:7px;">${cats.map(c=>`<option value="${c.id}" ${existing&&existing.cat===c.id?'selected':''}>${escapeHtml(c[uiLang])}</option>`).join('')}</select></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.price'))}</label><input type="number" step="0.01" inputmode="decimal" id="prodPrice" value="${existing&&existing.price!=null?existing.price:''}"></div>
+    <div class="modal-err" id="prodErr"></div>
+    <div class="modal-actions" style="flex-wrap:wrap;">
+      ${existing ? `<button class="btn ghost danger" id="prodDel">${escapeHtml(t('common.remove'))}</button>` : ''}
+      <button class="btn ghost" id="prodCancel">${t('modal.cancel')}</button>
+      <button class="btn" id="prodSave">${t('modal.save')}</button>
+    </div>`;
+  document.getElementById('modalOverlay').style.display = 'flex';
+  const fileEl = document.getElementById('prodPhotoFile');
+  document.getElementById('prodPhotoBtn').onclick = ()=> fileEl.click();
+  fileEl.onchange = async ()=>{
+    if(!fileEl.files[0]) return;
+    photo = await resizeImageFile(fileEl.files[0], 220, 0.6);
+    const pv = document.getElementById('prodPhotoPrev'); pv.src = photo; pv.style.visibility = 'visible';
+  };
+  document.getElementById('prodCancel').onclick = closeModal;
+  const del = document.getElementById('prodDel');
+  if(del) del.onclick = async ()=>{
+    if(!confirm(t('prod.deleteConfirm',{name:pname(existing)}))) return;
+    db.customParts = db.customParts.filter(x=>x.id!==existing.id);
+    syncCustomParts(); closeModal(); await saveDb(); renderCustomProducts(); renderProductsTable(document.getElementById('productSearch').value);
+    showToast(t('prod.deleted',{name:pname(existing)}));
+  };
+  document.getElementById('prodSave').onclick = async ()=>{
+    const c = document.getElementById('prodSku').value.trim();
+    const en = document.getElementById('prodEn').value.trim(), it = document.getElementById('prodIt').value.trim();
+    const err = document.getElementById('prodErr');
+    if(!en && !it){ err.textContent = t('prod.nameRequired'); return; }
+    if(c){
+      const clash = SEED.parts.find(p=>p.c && p.c.toLowerCase()===c.toLowerCase() && (!existing || p.id!==existing.id));
+      if(clash){ err.textContent = t('prod.skuDup',{name:pname(clash)}); return; }
+    }
+    const pr = parseFloat(document.getElementById('prodPrice').value);
+    const part = {id: existing ? existing.id : 'x'+Date.now().toString(36), c, en, it, cat: parseInt(document.getElementById('prodCat').value,10),
+      price: isNaN(pr) ? null : pr, img: photo, stock:'', ch:''};
+    if(existing) db.customParts = db.customParts.map(x=>x.id===existing.id ? part : x); else db.customParts.push(part);
+    syncCustomParts(); closeModal(); await saveDb(); renderCustomProducts(); renderProductsTable(document.getElementById('productSearch').value);
+    showToast(t('prod.saved',{name:pname(part)}));
+  };
+}
+function renderCustomProducts(){
+  const wrap = document.getElementById('customProdWrap');
+  const list = db.customParts || [];
+  if(!list.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = `<div class="brand-text" style="margin:8px 0;">${escapeHtml(t('prod.myTitle',{n:list.length}))}</div>`;
+  const table = document.createElement('table'); table.className = 'data-table';
+  table.innerHTML = '<tbody></tbody>';
+  list.forEach(p=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="thumb-cell">${p.img?`<img class="part-thumb" src="${p.img}">`:''}</td><td>${escapeHtml(p.c||'')}</td><td>${escapeHtml(pname(p))}</td><td class="row-actions"><button>${t('prod.edit')}</button></td>`;
+    tr.querySelector('button').onclick = ()=> openProductModal(p);
+    table.querySelector('tbody').appendChild(tr);
+  });
+  wrap.appendChild(table);
+}
+document.getElementById('addProductBtn').onclick = ()=> openProductModal(null);
+
 /* ================= INVENTORY (stock in the truck) ================= */
 function invQty(p){ const r = db.inventory && db.inventory[pkey(p)]; return r ? r.qty : 0; }
 function inventoryRows(){
@@ -2190,7 +2307,7 @@ const ADMIN_SECTION_RENDER = {
   'view-admin-drivers': renderDriverTable,
   'view-admin-staff': renderStaffTable,
   'view-admin-events': renderEventTable,
-  'view-admin-products': ()=>{ renderProductsTable(document.getElementById('productSearch').value); renderDeletedList(); },
+  'view-admin-products': ()=>{ renderProductsTable(document.getElementById('productSearch').value); renderDeletedList(); renderCustomProducts(); },
 };
 document.querySelectorAll('.admin-menu-tile').forEach(tile=>{
   tile.onclick = ()=>{
@@ -2552,6 +2669,8 @@ function migrateDb(){
   if(!db.partUsageCounts) db.partUsageCounts = {};
   if(!db.deletedParts) db.deletedParts = {};
   if(!db.driverCategories) db.driverCategories = {};
+  if(!db.customParts) db.customParts = [];
+  syncCustomParts();
   if(!db.inventory) db.inventory = {};
   if(!db.inventoryCustom) db.inventoryCustom = [];
   // one-time: add Damiano (admin, PIN login, inventory access). The flag stops it coming back if he is removed later.
