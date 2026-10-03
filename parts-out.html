@@ -203,7 +203,7 @@
   #confirmBtn{padding:11px 22px;}
 
   /* ---------- ADMIN ---------- */
-  #view-admin, #view-admin-clients, #view-admin-drivers, #view-admin-staff, #view-admin-events, #view-admin-products{padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));overflow-y:auto;overflow-x:hidden;}
+  #view-admin, #view-admin-clients, #view-admin-drivers, #view-admin-staff, #view-admin-events, #view-admin-products, #view-admin-backup{padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));overflow-y:auto;overflow-x:hidden;}
   .admin-menu{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
   .admin-menu-tile{
     background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;
@@ -395,6 +395,7 @@
       <div class="admin-menu-tile" data-target="view-admin-staff" data-i18n="admin.tabs.staff">Staff &amp; passwords</div>
       <div class="admin-menu-tile" data-target="view-admin-events" data-i18n="admin.tabs.events">Event history</div>
       <div class="admin-menu-tile" data-target="view-admin-products" data-i18n="admin.tabs.products">Products</div>
+      <div class="admin-menu-tile" data-target="view-admin-backup" data-i18n="bk.tab">Backup</div>
     </div>
   </div>
 
@@ -487,6 +488,25 @@
   </div>
 
   <!-- ===== ADMIN > PRODUCTS ===== -->
+  <div class="view" id="view-admin-backup">
+    <div class="home-topbar">
+      <div class="home-brand">
+        <button class="back-btn admin-sub-back">&larr; <span data-i18n="admin.title">Admin</span></button>
+        <div class="brand-text" style="margin-left:6px;" data-i18n="bk.title">Backup &amp; restore</div>
+      </div>
+    </div>
+    <div class="security-note" style="margin-bottom:12px;" data-i18n="bk.note">The app keeps copies automatically, on every device and in the cloud (one per day). Still, download a backup file before each event and after closing it.</div>
+    <div class="edit-bar">
+      <button class="btn" id="bkDownload" data-i18n="bk.download">Download backup file</button>
+      <button class="btn ghost" id="bkRestoreFile" data-i18n="bk.restoreFile">Restore from file</button>
+    </div>
+    <div class="brand-text" style="margin:16px 0 6px;" data-i18n="bk.deviceTitle">Copies on this device</div>
+    <div id="bkDevice"></div>
+    <div class="brand-text" style="margin:16px 0 6px;" data-i18n="bk.cloudTitle">Daily cloud copies</div>
+    <div id="bkCloud"></div>
+    <input type="file" id="bkFileInput" accept=".json,application/json" style="display:none;">
+  </div>
+
   <div class="view" id="view-admin-products">
     <div class="home-topbar">
       <div class="home-brand">
@@ -562,6 +582,29 @@ const I18N = {
     'home.guestBtn': 'Parts Browser',
     'home.driverNoEvent': 'No active event \u2014 ask an admin to open one.',
     'home.noDriversInEvent': 'No drivers were added to this event. Ask an admin to edit the event.',
+    'general.cantConnect': 'Cannot reach the shared database yet. Nothing has been changed or lost — it connects automatically when the signal returns.',
+    'general.permissionDeniedBlock': 'The shared database refused access (permission denied). Nothing was changed. Ask an admin to check the Firestore security rules.',
+    'general.retry': 'Retry',
+    'general.eventGone': 'This event no longer exists in the shared database — nothing was saved. Ask an admin.',
+    'bk.tab': 'Backup',
+    'bk.title': 'Backup & restore',
+    'bk.note': 'The app keeps copies automatically, on every device and in the cloud (one per day). Still, download a backup file before each event and after closing it.',
+    'bk.download': 'Download backup file',
+    'bk.restoreFile': 'Restore from file',
+    'bk.fileBad': 'That file is not a valid Ricambi backup.',
+    'bk.fileConfirm': 'Replace ALL shared data with this file?\nFile: {fe} events, {fn} entries.\nNow: {ce} events, {cn} entries.',
+    'bk.restored': 'Backup restored.',
+    'bk.deviceTitle': 'Copies on this device',
+    'bk.cloudTitle': 'Daily cloud copies',
+    'bk.none': 'No copies found.',
+    'bk.latest': 'Latest copy',
+    'bk.best': 'Fullest copy',
+    'bk.journal': 'Entry log of this device',
+    'bk.summary': '{ev} events, {en} entries',
+    'bk.restore': 'Restore (merge)',
+    'bk.mergeConfirm': 'Merge this copy into the shared data? Missing events and entries are added back; nothing that exists now is deleted.',
+    'bk.merged': 'Restored: {ev} events, {en} entries, {cu} clients added back.',
+    'bk.loading': 'Checking cloud copies…',
     'prod.addBtn': '+ New product',
     'prod.title': 'New product',
     'prod.editTitle': 'Edit product',
@@ -797,6 +840,29 @@ const I18N = {
     'home.guestBtn': 'Sfoglia ricambi',
     'home.driverNoEvent': 'Nessun evento attivo \u2014 chiedi a un admin di aprirne uno.',
     'home.noDriversInEvent': 'Nessun pilota \u00e8 stato aggiunto a questo evento. Chiedi a un admin di modificare l\u2019evento.',
+    'general.cantConnect': 'Impossibile raggiungere ancora il database condiviso. Nulla è stato modificato o perso — si collega da solo quando torna il segnale.',
+    'general.permissionDeniedBlock': 'Il database condiviso ha negato l’accesso (permesso negato). Nulla è stato modificato. Chiedi a un admin di controllare le regole di sicurezza di Firestore.',
+    'general.retry': 'Riprova',
+    'general.eventGone': 'Questo evento non esiste più nel database condiviso — nulla è stato salvato. Chiedi a un admin.',
+    'bk.tab': 'Backup',
+    'bk.title': 'Backup e ripristino',
+    'bk.note': 'L’app salva copie in automatico, su ogni dispositivo e nel cloud (una al giorno). Scarica comunque un file di backup prima di ogni evento e dopo la chiusura.',
+    'bk.download': 'Scarica file di backup',
+    'bk.restoreFile': 'Ripristina da file',
+    'bk.fileBad': 'Questo file non è un backup valido di Ricambi.',
+    'bk.fileConfirm': 'Sostituire TUTTI i dati condivisi con questo file?\nFile: {fe} eventi, {fn} voci.\nOra: {ce} eventi, {cn} voci.',
+    'bk.restored': 'Backup ripristinato.',
+    'bk.deviceTitle': 'Copie su questo dispositivo',
+    'bk.cloudTitle': 'Copie giornaliere nel cloud',
+    'bk.none': 'Nessuna copia trovata.',
+    'bk.latest': 'Ultima copia',
+    'bk.best': 'Copia più completa',
+    'bk.journal': 'Registro voci di questo dispositivo',
+    'bk.summary': '{ev} eventi, {en} voci',
+    'bk.restore': 'Ripristina (unisci)',
+    'bk.mergeConfirm': 'Unire questa copia ai dati condivisi? Eventi e voci mancanti vengono riaggiunti; non viene eliminato nulla di ciò che esiste ora.',
+    'bk.merged': 'Ripristinati: {ev} eventi, {en} voci, {cu} clienti riaggiunti.',
+    'bk.loading': 'Controllo delle copie nel cloud…',
     'prod.addBtn': '+ Nuovo prodotto',
     'prod.title': 'Nuovo prodotto',
     'prod.editTitle': 'Modifica prodotto',
@@ -1090,7 +1156,9 @@ async function sha256(str){
 
 let storageOk = true;
 let firebaseReady = false;
+let serverLoaded = false; // true only once the real shared data has been received from the server
 async function saveDb(){
+  if(!serverLoaded){ showToast(t('general.saveFailed',{reason:' (not connected)'}), true); return; }
   try{
     const approxSize = new Blob([JSON.stringify(db)]).size;
     if(approxSize > 900000){
@@ -1100,6 +1168,7 @@ async function saveDb(){
       const result = await window.__saveToFirebase(db);
       if(result && result.ok){
         storageOk = true;
+        localBackup(); cloudBackup();
       } else {
         storageOk = false;
         const reason = result && result.code ? ` (${result.code})` : '';
@@ -1142,6 +1211,67 @@ function buildSeedDb(){
   };
 }
 
+const LS_LATEST = 'ricambi_bk_latest', LS_BEST = 'ricambi_bk_best', LS_JOURNAL = 'ricambi_journal';
+function dbScore(d){ return ((d&&d.events)||[]).reduce((a,e)=>a+(e.entries||[]).length,0); }
+function lsGet(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+function entryKey(en){ return [en.ts, en.partId, en.recipientId, en.qty, en.chassisNo||'', en.note||''].join('|'); }
+let lastLocalBk = 0, lastCloudBk = 0;
+function localBackup(){
+  if(!db || !serverLoaded || !(db.events||[]).length) return; // never replace a good copy with an empty state
+  const now = Date.now(); if(now - lastLocalBk < 60000) return; lastLocalBk = now;
+  const snap = {ts:now, score:dbScore(db), data:db};
+  if(JSON.stringify(snap).length > 1500000) return;
+  lsSet(LS_LATEST, snap);
+  const best = lsGet(LS_BEST); if(!best || snap.score >= best.score) lsSet(LS_BEST, snap);
+}
+async function cloudBackup(){
+  if(!db || !serverLoaded || !window.__saveBackup) return;
+  const score = dbScore(db); if(score===0) return;
+  const now = Date.now(); if(now - lastCloudBk < 300000) return; lastCloudBk = now;
+  try{ await window.__saveBackup('backup-'+todayStr(), db, score); }catch(e){ console.warn('cloud backup failed', e); }
+}
+function journalAdd(ev, entries){
+  const j = lsGet(LS_JOURNAL) || [];
+  const meta = {id:ev.id, label:ev.label, startDate:ev.startDate, endDate:ev.endDate, location:ev.location||'', billing:ev.billing||'', status:'open', driverIds:ev.driverIds||[]};
+  entries.forEach(en=> j.push({ev:meta, en}));
+  lsSet(LS_JOURNAL, j.slice(-4000));
+}
+function journalRemove(en){ const k = entryKey(en); lsSet(LS_JOURNAL, (lsGet(LS_JOURNAL)||[]).filter(x=>entryKey(x.en)!==k)); }
+// atomic change of the shared data: reads the latest server copy, applies the change, writes it back; fails loudly if it can't
+async function mutateDb(mutator){
+  if(!serverLoaded || !window.__txUpdate){ showToast(t('general.saveFailed',{reason:' (not connected)'}), true); return false; }
+  try{
+    const next = await window.__txUpdate(mutator);
+    db = next; migrateDb(); syncCustomParts(); storageOk = true;
+    localBackup(); cloudBackup();
+    return true;
+  }catch(e){
+    console.error('transaction failed', e);
+    showToast(e && e.message==='event-missing' ? t('general.eventGone') : t('general.saveFailed',{reason: e && e.code ? ' ('+e.code+')' : ''}), true);
+    return false;
+  }
+}
+function mergeDb(src){
+  const r = {ev:0, en:0, cu:0};
+  (src.events||[]).forEach(se=>{
+    let ev = db.events.find(e=>e.id===se.id);
+    if(!ev){ ev = {...se, entries:[]}; db.events.push(ev); r.ev++; }
+    const have = new Set(ev.entries.map(entryKey));
+    (se.entries||[]).forEach(en=>{
+      if(have.has(entryKey(en))) return;
+      ev.entries.push(en); have.add(entryKey(en)); r.en++;
+      const p = getPart(en.partId); if(p){ const k = pkey(p); db.partUsageCounts[k] = (db.partUsageCounts[k]||0) + en.qty; }
+    });
+  });
+  (src.customers||[]).forEach(c=>{ if(!db.customers.some(x=>x.id===c.id)){ db.customers.push(c); r.cu++; } });
+  (src.staff||[]).forEach(u=>{ if(!db.staff.some(x=>x.id===u.id || x.name===u.name)) db.staff.push(u); });
+  (src.customParts||[]).forEach(p=>{ if(!(db.customParts||[]).some(x=>x.id===p.id)) db.customParts.push(p); });
+  Object.keys(src.partOverrides||{}).forEach(k=>{ if(!db.partOverrides[k]) db.partOverrides[k] = src.partOverrides[k]; });
+  Object.keys(src.driverCategories||{}).forEach(k=>{ if(!db.driverCategories[k]) db.driverCategories[k] = src.driverCategories[k]; });
+  syncCustomParts();
+  return r;
+}
 function dateInRange(e, d){
   d = d || todayStr();
   return (!e.startDate || d >= e.startDate) && (!e.endDate || d <= e.endDate);
@@ -2040,14 +2170,8 @@ document.getElementById('confirmBtn').onclick = async ()=>{
     ? cat.recipient.drivers.map(n=>({type:'driver', id:n, name:n}))
     : [{type:cat.recipient.type, id:cat.recipient.id, name:cat.recipient.name}];
 
-  // track how often each part actually gets used, to drive most-used-first ordering in the catalog
-  ids.forEach(id=>{
-    const p = getPart(id);
-    if(!p) return;
-    const qty = cat.cart[id] * targets.length;
-    const k = pkey(p);
-    db.partUsageCounts[k] = (db.partUsageCounts[k] || 0) + qty;
-  });
+  // usage counts drive most-used-first ordering in the catalog
+  const incs = ids.map(id=>{ const p = getPart(id); return p ? {k:pkey(p), qty:cat.cart[id]*targets.length} : null; }).filter(Boolean);
 
   const entries = [];
   targets.forEach(tg=>{
@@ -2070,8 +2194,14 @@ document.getElementById('confirmBtn').onclick = async ()=>{
 
   if(ev){
     // event open: add silently to the running basket, total is produced when the event closes
-    ev.entries.push(...entries);
-    await saveDb();
+    const okSave = await mutateDb(d=>{
+      const e = d.events.find(x=>x.id===ev.id); if(!e) throw new Error('event-missing');
+      e.entries.push(...entries.map(x=>({...x})));
+      d.partUsageCounts = d.partUsageCounts || {};
+      incs.forEach(i=>{ d.partUsageCounts[i.k] = (d.partUsageCounts[i.k]||0) + i.qty; });
+    });
+    if(!okSave) return; // the selection stays in the basket so nothing has to be re-entered
+    journalAdd(ev, entries);
     showToast(isGroup ? t('quick.added',{n:targets.length, event:ev.label}) : t('catalog.addedToEvent', {label: ev.label}));
     cat.cart = {}; cat.chassis = {}; cat.opts = {}; cat.priceRevealed = false;
     renderGrid(); renderConfirmBar();
@@ -2080,6 +2210,7 @@ document.getElementById('confirmBtn').onclick = async ()=>{
   }
 
   // no event open (standalone walk-in customer): export an immediate receipt, nothing to add to later
+  incs.forEach(i=>{ db.partUsageCounts[i.k] = (db.partUsageCounts[i.k]||0) + i.qty; });
   const rows = [];
   ids.forEach(id=>{
     const p = getPart(id);
@@ -2140,11 +2271,14 @@ function openLoggedModal(){
     row.querySelector('button').onclick = async ()=>{
       if(!confirm(t('log.removeConfirm',{qty:en.qty, name:nm, who:cat.recipient.name}))) return;
       // find the same entry in the live db (the shared doc is re-read after every save, so match by content, not by reference)
-      const idx = ev.entries.findIndex(x=>x.ts===en.ts && x.partId===en.partId && x.recipientId===en.recipientId && x.qty===en.qty && x.chassisNo===en.chassisNo && x.note===en.note);
-      if(idx<0) return;
-      ev.entries.splice(idx,1);
-      if(p){ const k = pkey(p); const next = (db.partUsageCounts[k]||0) - en.qty; if(next>0) db.partUsageCounts[k] = next; else delete db.partUsageCounts[k]; }
-      await saveDb();
+      const okRm = await mutateDb(d=>{
+        const e = d.events.find(x=>x.id===ev.id); if(!e) throw new Error('event-missing');
+        const i = e.entries.findIndex(x=>entryKey(x)===entryKey(en)); if(i<0) return;
+        e.entries.splice(i,1);
+        if(p){ const k = pkey(p); const n = ((d.partUsageCounts||{})[k]||0) - en.qty; if(n>0) d.partUsageCounts[k] = n; else delete d.partUsageCounts[k]; }
+      });
+      if(!okRm) return;
+      journalRemove(en);
       showToast(t('log.removed',{name:nm}));
       openLoggedModal();
       renderGrid();
@@ -2225,6 +2359,74 @@ function renderCustomProducts(){
   wrap.appendChild(table);
 }
 document.getElementById('addProductBtn').onclick = ()=> openProductModal(null);
+
+/* ================= ADMIN: backup & restore ================= */
+function bkRow(label, info, onRestore){
+  const row = document.createElement('div'); row.className = 'log-row';
+  row.innerHTML = `<div class="log-main"><div class="log-name">${escapeHtml(label)}</div><div class="log-meta">${escapeHtml(info)}</div></div><button class="btn ghost" style="padding:8px 12px;font-size:13px;">${escapeHtml(t('bk.restore'))}</button>`;
+  row.querySelector('button').onclick = async ()=>{
+    if(!confirm(t('bk.mergeConfirm'))) return;
+    const r = await onRestore();
+    if(r) showToast(t('bk.merged',{ev:r.ev, en:r.en, cu:r.cu}));
+  };
+  return row;
+}
+async function restoreMerge(src){
+  const r = mergeDb(src);
+  const ok = await mutateDb(d=>{
+    // re-apply the merge on the freshest server copy so nothing logged meanwhile is lost
+    const keep = db; db = d; try{ mergeDb(src); } finally { db = keep; }
+  });
+  return ok ? r : null;
+}
+async function renderBackupView(){
+  const dev = document.getElementById('bkDevice'); dev.innerHTML = '';
+  const when = ts=> new Date(ts).toLocaleString(uiLang==='it'?'it-IT':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const sum = d=> t('bk.summary',{ev:(d.events||[]).length, en:dbScore(d)});
+  let any = false;
+  [[LS_LATEST,'bk.latest'],[LS_BEST,'bk.best']].forEach(([k,lab])=>{
+    const b = lsGet(k); if(!b || !b.data) return; any = true;
+    dev.appendChild(bkRow(t(lab)+' \u00b7 '+when(b.ts), sum(b.data), ()=>restoreMerge(b.data)));
+  });
+  const j = lsGet(LS_JOURNAL) || [];
+  if(j.length){
+    any = true;
+    const evs = {}; j.forEach(x=>{ (evs[x.ev.id] = evs[x.ev.id] || {...x.ev, entries:[]}).entries.push(x.en); });
+    const src = {events:Object.values(evs)};
+    dev.appendChild(bkRow(t('bk.journal'), sum(src), ()=>restoreMerge(src)));
+  }
+  if(!any) dev.innerHTML = `<div class="empty-note">${t('bk.none')}</div>`;
+  const cl = document.getElementById('bkCloud'); cl.innerHTML = `<div class="empty-note">${t('bk.loading')}</div>`;
+  const rows = [];
+  for(let i=0;i<14;i++){
+    const dt = new Date(Date.now()-i*86400000).toISOString().slice(0,10);
+    try{
+      const b = window.__getBackup ? await window.__getBackup('backup-'+dt) : null;
+      if(b) rows.push(bkRow(dt, sum(b), ()=>restoreMerge(b)));
+    }catch(e){ break; }
+  }
+  cl.innerHTML = '';
+  if(!rows.length) cl.innerHTML = `<div class="empty-note">${t('bk.none')}</div>`; else rows.forEach(r=>cl.appendChild(r));
+}
+document.getElementById('bkDownload').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(db)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `ricambi-backup_${todayStr()}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+};
+document.getElementById('bkRestoreFile').onclick = ()=>{
+  const inp = document.getElementById('bkFileInput'); inp.value = '';
+  inp.onchange = async ()=>{
+    const f = inp.files[0]; if(!f) return;
+    let data; try{ data = JSON.parse(await f.text()); }catch(e){ data = null; }
+    if(!data || !Array.isArray(data.events) || !Array.isArray(data.staff)){ showToast(t('bk.fileBad'), true); return; }
+    delete data.__score; delete data.__ts;
+    if(!confirm(t('bk.fileConfirm',{fe:data.events.length, fn:dbScore(data), ce:db.events.length, cn:dbScore(db)}))) return;
+    const keep = db; db = data; migrateDb(); syncCustomParts();
+    await saveDb();
+    showToast(t('bk.restored')); renderBackupView();
+  };
+  inp.click();
+};
 
 /* ================= INVENTORY (stock in the truck) ================= */
 function invQty(p){ const r = db.inventory && db.inventory[pkey(p)]; return r ? r.qty : 0; }
@@ -2307,6 +2509,7 @@ const ADMIN_SECTION_RENDER = {
   'view-admin-drivers': renderDriverTable,
   'view-admin-staff': renderStaffTable,
   'view-admin-events': renderEventTable,
+  'view-admin-backup': ()=> renderBackupView(),
   'view-admin-products': ()=>{ renderProductsTable(document.getElementById('productSearch').value); renderDeletedList(); renderCustomProducts(); },
 };
 document.querySelectorAll('.admin-menu-tile').forEach(tile=>{
@@ -2713,7 +2916,9 @@ async function bootWithDb(cloudData){
 let permissionDenied = false;
 window.__onFirebaseReady = function(){
   firebaseReady = true;
-  window.__subscribeFirebase((cloudData)=>{
+  window.__subscribeFirebase((cloudData, meta)=>{
+    if(meta && meta.fromCache) return; // never act on a cache-only answer: wait for the server
+    serverLoaded = true;
     if(!dbBooted){
       bootWithDb(cloudData);
     } else {
@@ -2728,9 +2933,9 @@ window.__onFirebaseReady = function(){
       });
     }
   }, (err)=>{
-    // read denied/failed outright \u2014 don't wait the full timeout, boot in-memory now
+    // read denied/failed: do NOT start with empty data (that could overwrite the real data later) \u2014 just say so
     if(err && err.code === 'permission-denied') permissionDenied = true;
-    if(!dbBooted){ storageOk = false; bootWithDb(null); }
+    if(!dbBooted) showConnProblem(permissionDenied);
   });
   window.__subscribeTeamDrivers((drivers)=>{
     externalDrivers = drivers || [];
@@ -2740,20 +2945,25 @@ window.__onFirebaseReady = function(){
     if(document.getElementById('view-admin-drivers').classList.contains('active')){ renderDriverTable(); }
   });
 };
-// Fallback: if Firebase hasn't connected within a few seconds (offline, blocked, etc.),
-// boot from a fresh in-memory seed so the app is still usable \u2014 just not saved anywhere.
-setTimeout(()=>{
-  if(!dbBooted){
-    storageOk = false;
-    bootWithDb(null);
+// If the shared database can't be reached, say so and keep waiting \u2014 never start with empty data.
+function showConnProblem(denied){
+  const n = document.getElementById('loginLoadingNote');
+  if(!n) return;
+  n.removeAttribute('data-i18n');
+  n.textContent = t(denied ? 'general.permissionDeniedBlock' : 'general.cantConnect');
+  if(!document.getElementById('connRetry')){
+    const b = document.createElement('button'); b.className = 'btn ghost'; b.id = 'connRetry'; b.style.marginTop = '12px';
+    b.textContent = t('general.retry'); b.onclick = ()=> location.reload();
+    n.appendChild(document.createElement('br')); n.appendChild(b);
   }
-}, 6000);
+}
+setTimeout(()=>{ if(!dbBooted) showConnProblem(permissionDenied); }, 8000);
 </script>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, onSnapshot
+    getFirestore, doc, setDoc, getDoc, onSnapshot, runTransaction
   } from "https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -2782,9 +2992,33 @@ setTimeout(()=>{
     });
   };
 
+  // atomic read-modify-write on the live document: concurrent devices can no longer overwrite each other's entries
+  window.__txUpdate = async function(mutator){
+    let out;
+    await runTransaction(db, async (tx)=>{
+      const snap = await tx.get(partsOutDocRef);
+      if(!snap.exists()) throw new Error('db-missing');
+      const cur = snap.data();
+      mutator(cur);
+      tx.set(partsOutDocRef, cur);
+      out = cur;
+    });
+    return out;
+  };
+  // daily cloud backups live next to the main doc; a fuller copy is never replaced by an emptier one
+  window.__saveBackup = async function(id, data, score){
+    const ref = doc(db, "partsOutData", id);
+    const ex = await getDoc(ref);
+    if(ex.exists() && (ex.data().__score||0) > score) return;
+    await setDoc(ref, {...data, __score:score, __ts:Date.now()});
+  };
+  window.__getBackup = async function(id){
+    const s = await getDoc(doc(db, "partsOutData", id));
+    return s.exists() ? s.data() : null;
+  };
   window.__subscribeFirebase = function(callback, onError){
-    onSnapshot(partsOutDocRef, (snap)=>{
-      callback(snap.exists() ? snap.data() : null);
+    onSnapshot(partsOutDocRef, {includeMetadataChanges:true}, (snap)=>{
+      callback(snap.exists() ? snap.data() : null, {fromCache: snap.metadata.fromCache});
     }, (err)=>{
       console.error("Firebase listener error:", err);
       if(onError) onError(err);
