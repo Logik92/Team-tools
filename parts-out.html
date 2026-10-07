@@ -529,7 +529,7 @@
       </div>
     </div>
     <div class="security-note" style="margin-bottom:12px;" data-i18n="admin.products.securityNote">Editing here updates price/name overrides stored in the app and reflected in the exported CSV. It does not write back to your live store &mdash; re-upload the exported CSV there yourself to sync it.</div>
-    <div class="edit-bar"><button class="btn" id="addProductBtn" data-i18n="prod.addBtn">+ New product</button> <button class="btn ghost" id="exportChangesBtn">Export changes</button></div>
+    <div class="edit-bar"><button class="btn" id="addProductBtn" data-i18n="prod.addBtn">+ New product</button> <button class="btn ghost" id="exportChangesBtn">Export changes</button> <button class="btn ghost" id="exportCatalogBtn" data-i18n="prod.exportCatalog">Export catalogue update (with photos)</button></div>
     <div id="customProdWrap" style="margin-bottom:14px;"></div>
     <div id="productTableWrap"></div>
     <div style="margin-top:26px;">
@@ -589,6 +589,8 @@ const I18N = {
     'home.guestBtn': 'Parts Browser',
     'home.driverNoEvent': 'No active event \u2014 ask an admin to open one.',
     'home.noDriversInEvent': 'No drivers were added to this event. Ask an admin to edit the event.',
+    'prod.exportCatalog': 'Export catalogue update (with photos)',
+    'prod.catalogExported': 'Catalogue update exported ({n} items).',
     'admin.products.thNames': 'Name (EN / IT)',
     'admin.products.noEn': '(no English name)',
     'admin.products.noIt': '(no Italian name)',
@@ -869,6 +871,8 @@ const I18N = {
     'home.guestBtn': 'Sfoglia ricambi',
     'home.driverNoEvent': 'Nessun evento attivo \u2014 chiedi a un admin di aprirne uno.',
     'home.noDriversInEvent': 'Nessun pilota \u00e8 stato aggiunto a questo evento. Chiedi a un admin di modificare l\u2019evento.',
+    'prod.exportCatalog': 'Esporta aggiornamento catalogo (con foto)',
+    'prod.catalogExported': 'Aggiornamento catalogo esportato ({n} voci).',
     'admin.products.thNames': 'Nome (EN / IT)',
     'admin.products.noEn': '(nessun nome inglese)',
     'admin.products.noIt': '(nessun nome italiano)',
@@ -2905,6 +2909,25 @@ function exportChanges(){
   if(confirm(t('prod.clearAsk'))){ db.productChanges = []; saveDb(); updateChangesBtn(); }
 }
 document.getElementById('exportChangesBtn').onclick = exportChanges;
+// full catalogue update (photos included) so it can be hard-wired into the next build of the app
+function exportCatalogUpdate(){
+  const catName = id=>(catNameById[id]||{}).en||'';
+  const edits = Object.entries(db.partOverrides||{}).map(([k,o])=>{
+    const base = k.charAt(0)==='#' ? partBaseById[k.slice(1)] : partBaseById[skuToPartId[k]];
+    if(!base || !o) return null;
+    return {key:k, base_sku:base.c||'', base_name_en:base.en||'', base_name_it:base.it||'', category:catName(base.cat),
+      sku:o.c||base.c||'', name_en:o.en||'', name_it:o.it||'', price_eur:o.price!=null?o.price:'', photo:o.img||''};
+  }).filter(Boolean);
+  const custom = (db.customParts||[]).map(p=>({id:p.id, sku:p.c||'', name_en:p.en||'', name_it:p.it||'', category:catName(p.cat), price_eur:p.price!=null?p.price:'', photo:p.img||''}));
+  const deleted = Object.values(db.deletedParts||{}).map(v=>({sku:v.sku||'', id:v.id, name_en:v.en, name_it:v.it||'', category:v.cat||''}));
+  if(!edits.length && !custom.length && !deleted.length){ showToast(t('prod.noChanges'), true); return; }
+  const out = {type:'ricambi-catalogue-update', exported:new Date().toISOString(), edits, newProducts:custom, deleted, changeLog:db.productChanges||[]};
+  const blob = new Blob([JSON.stringify(out)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `catalogue-update_${todayStr()}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  showToast(t('prod.catalogExported',{n:edits.length+custom.length+deleted.length}));
+}
+document.getElementById('exportCatalogBtn').onclick = exportCatalogUpdate;
 function reindexOverrideSkus(){
   Object.entries((db && db.partOverrides) || {}).forEach(([k,o])=>{
     if(!o || !o.c) return;
