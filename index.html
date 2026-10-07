@@ -186,6 +186,21 @@
     width:auto; flex:0 0 auto; padding:4px 20px 4px 6px; font-size:11px;
     background-position: calc(100% - 8px) calc(1em - 1px), calc(100% - 5px) calc(1em - 1px);
   }
+  .chassis-edit-btn{
+    background:none; border:1px solid var(--amber); color:var(--amber); font-size:11px;
+    border-radius:4px; padding:3px 7px; cursor:pointer; flex:0 0 auto; white-space:nowrap;
+  }
+  .chassis-edit-btn.active{ background:var(--amber); color:#1a1400; }
+  .chassis-edit-panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:10px 12px 4px; margin:-2px 0 10px; font-size:13px;
+  }
+  .chassis-edit-row{ display:grid; grid-template-columns:72px 1fr 32px; gap:6px; margin-bottom:8px; align-items:center; }
+  .chassis-edit-row input{ font-size:13px; padding:8px 9px; }
+  .chassis-edit-row .rm{
+    background:none; border:none; color:var(--red); font-size:18px;
+    line-height:1; cursor:pointer; padding:2px;
+  }
   .addrow{ display:grid; grid-template-columns:1fr 90px 44px; gap:8px; margin-top:10px; }
   .addbtn{
     background:var(--amber); color:#1a1400; border:none; border-radius:6px;
@@ -1178,6 +1193,8 @@ function updateDriverCount(){
   if (summary) summary.textContent = `${n} driver${n === 1 ? '' : 's'} total in the roster`;
 }
 
+let chassisEditOpenIndex = null;
+
 function renderDriverList(){
   const list = document.getElementById('driverList');
   list.innerHTML = '';
@@ -1186,14 +1203,80 @@ function renderDriverList(){
   drivers.forEach((d, i)=>{
     const row = document.createElement('div');
     row.className = 'driver-row';
-    const chassisBadge = (d.chassisList && d.chassisList.length)
-      ? `<span style="color:var(--amber); font-size:11px; flex:0 0 auto;">🏎️ ${d.chassisList.length}</span>` : '';
+    const n = (d.chassisList && d.chassisList.length) || 0;
+    const isOpen = chassisEditOpenIndex === i;
+    const chassisBtn = `<button type="button" class="chassis-edit-btn${isOpen ? ' active' : ''}" onclick="toggleChassisEdit(${i})">🏎️ ${n}</button>`;
     const catOptions = cats.map(c=>
       `<option value="${c}" ${d.category===c ? 'selected' : ''}>${c || '–'}</option>`
     ).join('');
-    row.innerHTML = `<span>${d.flag} ${d.name}</span>${chassisBadge}<select class="dr-cat" onchange="updateDriverCategory(${i}, this.value)">${catOptions}</select><button class="rm" onclick="removeDriver(${i})">✕</button>`;
+    row.innerHTML = `<span>${d.flag} ${d.name}</span>${chassisBtn}<select class="dr-cat" onchange="updateDriverCategory(${i}, this.value)">${catOptions}</select><button class="rm" onclick="removeDriver(${i})">✕</button>`;
     list.appendChild(row);
+    if (isOpen){
+      const panel = document.createElement('div');
+      panel.className = 'chassis-edit-panel';
+      panel.innerHTML = chassisEditPanelHTML(i);
+      list.appendChild(panel);
+    }
   });
+}
+
+function currentChassisBrandChoices(){
+  return (currentEventSettings && currentEventSettings.chassisBrands && currentEventSettings.chassisBrands.length)
+    ? currentEventSettings.chassisBrands : ['KR1','KR2'];
+}
+
+function chassisBrandOptionsHTML(current){
+  const brands = currentChassisBrandChoices();
+  let opts = brands.map(b=>`<option value="${b}" ${current===b ? 'selected' : ''}>${b}</option>`).join('');
+  if (current && !brands.includes(current)){
+    opts += `<option value="${current}" selected>${current}</option>`;
+  }
+  return opts;
+}
+
+function chassisEditPanelHTML(i){
+  const list = drivers[i].chassisList || [];
+  const rows = list.map((c, ci)=> `
+    <div class="chassis-edit-row">
+      <select onchange="updateDriverChassisField(${i},${ci},'brand',this.value)">${chassisBrandOptionsHTML(c.brand)}</select>
+      <input type="text" value="${(c.num || '').replace(/"/g,'&quot;')}" placeholder="Chassis number" autocapitalize="characters" oninput="updateDriverChassisField(${i},${ci},'num',this.value)">
+      <button class="rm" onclick="removeDriverChassis(${i},${ci})">✕</button>
+    </div>`).join('');
+  const addBtn = list.length < 4
+    ? `<button class="syncbtn" style="width:100%; margin-bottom:10px;" onclick="addDriverChassis(${i})">+ Add chassis</button>`
+    : `<div class="note" style="text-align:center; margin-bottom:10px;">Max 4 chassis per driver</div>`;
+  return (rows || '<div class="note" style="margin-bottom:8px;">No chassis added yet.</div>') + addBtn;
+}
+
+function addDriverChassis(i){
+  if (!drivers[i].chassisList) drivers[i].chassisList = [];
+  if (drivers[i].chassisList.length >= 4) return;
+  const brands = currentChassisBrandChoices();
+  drivers[i].chassisList.push({brand: brands[0] || '', num: ''});
+  chassisEditOpenIndex = i;
+  renderDriverList();
+  populateAllChassisPickers();
+  saveTeamData();
+}
+
+function removeDriverChassis(i, ci){
+  drivers[i].chassisList.splice(ci, 1);
+  chassisEditOpenIndex = i;
+  renderDriverList();
+  populateAllChassisPickers();
+  saveTeamData();
+}
+
+function updateDriverChassisField(i, ci, field, value){
+  if (!drivers[i].chassisList || !drivers[i].chassisList[ci]) return;
+  drivers[i].chassisList[ci][field] = value;
+  populateAllChassisPickers();
+  saveTeamData();
+}
+
+function toggleChassisEdit(i){
+  chassisEditOpenIndex = (chassisEditOpenIndex === i) ? null : i;
+  renderDriverList();
 }
 
 function updateDriverCategory(i, value){
