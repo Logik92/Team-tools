@@ -252,6 +252,12 @@
   .part-thumb{width:34px;height:34px;border-radius:6px;object-fit:cover;background:var(--surface2);}
   table.data-table td.thumb-cell{width:44px;}
   .price-input{width:80px;background:var(--surface2);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:5px 7px;font-size:12.5px;}
+  .cond-pick{display:flex;gap:10px;margin:14px 0 6px;}
+  .cond-btn{flex:1;padding:18px 10px;font-size:18px;font-weight:700;border-radius:10px;border:2px solid var(--line);background:var(--surface2);color:var(--text);cursor:pointer;}
+  .cond-btn.sel{border-color:var(--accent);background:var(--accent);color:#1a1d1f;}
+  .event-bigbtns{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0 16px;}
+  .event-bigbtns .big{flex:1;min-width:220px;padding:20px 16px;font-size:18px;font-weight:700;}
+  .name-it{color:var(--muted,#8a9499);font-size:13px;}
 </style>
 </head>
 <body>
@@ -476,10 +482,11 @@
     </div>
     <div class="inline-form">
       <button class="btn" id="newEventBtn" data-i18n="admin.events.newBtn">New event</button>
-      <div class="csv-actions">
-        <button class="btn ghost" id="importEventsBtn" data-i18n="common.importCsv">Import CSV</button>
-        <button class="btn ghost" id="exportEventsBtn" data-i18n="common.exportCsv">Export CSV</button>
-      </div>
+    </div>
+    <div class="event-bigbtns">
+      <button class="btn big" id="exportCurrentEventBtn" data-i18n="admin.events.exportCurrent">Export current event</button>
+      <button class="btn ghost big" id="importCalendarBtn" data-i18n="admin.events.importCalendar">Import calendar CSV</button>
+      <button class="btn ghost" id="calendarTemplateBtn" data-i18n="admin.events.csvTemplate">CSV template</button>
     </div>
     <div class="stat-cards" id="eventStatCards"></div>
     <div style="overflow-x:auto;">
@@ -522,7 +529,7 @@
       </div>
     </div>
     <div class="security-note" style="margin-bottom:12px;" data-i18n="admin.products.securityNote">Editing here updates price/name overrides stored in the app and reflected in the exported CSV. It does not write back to your live store &mdash; re-upload the exported CSV there yourself to sync it.</div>
-    <div class="edit-bar"><button class="btn" id="addProductBtn" data-i18n="prod.addBtn">+ New product</button></div>
+    <div class="edit-bar"><button class="btn" id="addProductBtn" data-i18n="prod.addBtn">+ New product</button> <button class="btn ghost" id="exportChangesBtn">Export changes</button></div>
     <div id="customProdWrap" style="margin-bottom:14px;"></div>
     <div id="productTableWrap"></div>
     <div style="margin-top:26px;">
@@ -582,6 +589,28 @@ const I18N = {
     'home.guestBtn': 'Parts Browser',
     'home.driverNoEvent': 'No active event \u2014 ask an admin to open one.',
     'home.noDriversInEvent': 'No drivers were added to this event. Ask an admin to edit the event.',
+    'admin.products.thNames': 'Name (EN / IT)',
+    'admin.products.noEn': '(no English name)',
+    'admin.products.noIt': '(no Italian name)',
+    'admin.products.editBtn': 'Edit',
+    'pe.title': 'Edit product',
+    'pe.skuFixed': 'SKU (catalogue code, fixed)',
+    'pe.skuAdd': 'SKU (add one — this product has none)',
+    'pe.saved': 'Saved {name}.',
+    'pe.nothing': 'Nothing changed.',
+    'prod.exportChanges': 'Export changes ({n})',
+    'prod.noChanges': 'No changes recorded yet.',
+    'prod.clearAsk': 'Changes exported. Clear the list now so the next export only holds new changes?',
+    'admin.events.exportCurrent': 'Export current event',
+    'admin.events.importCalendar': 'Import calendar CSV',
+    'admin.events.csvTemplate': 'CSV template',
+    'admin.events.noCurrent': 'No event is open right now.',
+    'cond.title': 'New or used?',
+    'cond.prompt': 'Select the condition before signing it out.',
+    'cond.new': 'New',
+    'cond.used': 'Used',
+    'cond.required': 'Select New or Used.',
+    'cond.add': 'Add',
     'general.cantConnect': 'Cannot reach the shared database yet. Nothing has been changed or lost — it connects automatically when the signal returns.',
     'general.permissionDeniedBlock': 'The shared database refused access (permission denied). Nothing was changed. Ask an admin to check the Firestore security rules.',
     'general.retry': 'Retry',
@@ -656,7 +685,7 @@ const I18N = {
     'edit.clientRemoved': 'Client removed: {name}',
     'edit.clientNamePrompt': 'Client name:',
     'quick.noCats': 'No driver categories set yet. Assign them in Admin > Drivers to get one button per category.',
-    'quick.notAvail': 'Frames and chains need a single driver, not quick-add.',
+    'quick.notAvail': 'Frames, chains, seats, axles and wheels need a single driver, not quick-add.',
     'pw.ok': 'OK',
     'opt.chainTitle': 'Chain length',
     'opt.chainPrompt': 'Choose the number of links for this chain.',
@@ -840,6 +869,28 @@ const I18N = {
     'home.guestBtn': 'Sfoglia ricambi',
     'home.driverNoEvent': 'Nessun evento attivo \u2014 chiedi a un admin di aprirne uno.',
     'home.noDriversInEvent': 'Nessun pilota \u00e8 stato aggiunto a questo evento. Chiedi a un admin di modificare l\u2019evento.',
+    'admin.products.thNames': 'Nome (EN / IT)',
+    'admin.products.noEn': '(nessun nome inglese)',
+    'admin.products.noIt': '(nessun nome italiano)',
+    'admin.products.editBtn': 'Modifica',
+    'pe.title': 'Modifica prodotto',
+    'pe.skuFixed': 'SKU (codice catalogo, fisso)',
+    'pe.skuAdd': 'SKU (aggiungine uno — questo prodotto non ne ha)',
+    'pe.saved': '{name} salvato.',
+    'pe.nothing': 'Nessuna modifica.',
+    'prod.exportChanges': 'Esporta modifiche ({n})',
+    'prod.noChanges': 'Nessuna modifica registrata.',
+    'prod.clearAsk': 'Modifiche esportate. Svuotare ora l’elenco così il prossimo export contiene solo le novità?',
+    'admin.events.exportCurrent': 'Esporta evento corrente',
+    'admin.events.importCalendar': 'Importa calendario CSV',
+    'admin.events.csvTemplate': 'Modello CSV',
+    'admin.events.noCurrent': 'Nessun evento aperto al momento.',
+    'cond.title': 'Nuovo o usato?',
+    'cond.prompt': 'Seleziona la condizione prima di registrare.',
+    'cond.new': 'Nuovo',
+    'cond.used': 'Usato',
+    'cond.required': 'Seleziona Nuovo o Usato.',
+    'cond.add': 'Aggiungi',
     'general.cantConnect': 'Impossibile raggiungere ancora il database condiviso. Nulla è stato modificato o perso — si collega da solo quando torna il segnale.',
     'general.permissionDeniedBlock': 'Il database condiviso ha negato l’accesso (permesso negato). Nulla è stato modificato. Chiedi a un admin di controllare le regole di sicurezza di Firestore.',
     'general.retry': 'Riprova',
@@ -914,7 +965,7 @@ const I18N = {
     'edit.clientRemoved': 'Cliente rimosso: {name}',
     'edit.clientNamePrompt': 'Nome cliente:',
     'quick.noCats': 'Nessuna categoria pilota impostata. Assegnale in Admin > Piloti per avere un pulsante per categoria.',
-    'quick.notAvail': 'Scocche e catene richiedono un singolo pilota, non l’aggiunta rapida.',
+    'quick.notAvail': 'Scocche, catene, sedili, assali e ruote richiedono un singolo pilota, non l’aggiunta rapida.',
     'pw.ok': 'OK',
     'opt.chainTitle': 'Lunghezza catena',
     'opt.chainPrompt': 'Scegli il numero di maglie per questa catena.',
@@ -1125,7 +1176,7 @@ const partBaseById = {};
 const skuToPartId = {};
 SEED.parts.forEach(p => { partBaseById[p.id] = p; if(p.c) skuToPartId[p.c] = p.id; });
 function pname(p){ return p[uiLang] || p.it || p.en || ''; }
-function pkey(p){ return p.c || ('#'+p.id); } // override/usage/deleted key: SKU, or '#id' for the few parts without one (chassis frames)
+function pkey(p){ return p._k || p.c || ('#'+p.id); } // override/usage/deleted key: SKU, or '#id' for the few parts without one (chassis frames)
 function syncCustomParts(){
   // products added by admins live in db.customParts and are merged into the catalog arrays
   for(let i=SEED.parts.length-1;i>=0;i--){ if(SEED.parts[i].custom){ delete partBaseById[SEED.parts[i].id]; SEED.parts.splice(i,1); } }
@@ -1140,7 +1191,60 @@ function getPart(id){
   if(!base) return null;
   const o = (db && db.partOverrides) ? db.partOverrides[pkey(base)] : null;
   if(!o) return base;
-  return {...base, en:o.en||base.en, it:o.it||base.it, price:(o.price!=null && o.price!=='' ? +o.price : base.price)};
+  return {...base, _k:pkey(base), c:(o.c||base.c), img:(o.img||base.img), en:o.en||base.en, it:o.it||base.it, price:(o.price!=null && o.price!=='' ? +o.price : base.price)};
+}
+// New/Used is asked for: all frames, Jecko seats, rear axles, wheels/rims (not their screws, O-rings, valves)
+function needsCondition(p){
+  if(!p) return false;
+  if(p.frame || p.cond) return true;
+  const names = [p.en, p.it].map(x=>String(x||'').toUpperCase());
+  const cn = (catNameById[p.cat]||{}).en;
+  if(cn==='Seats') return names.some(n=>/^(SEAT|SEDILE) JECKO\b/.test(n));
+  if(cn==='Rear Axles') return names.some(n=>/^(REAR AXLE|ASSALE)\b/.test(n));
+  if(cn==='Wheels') return !names.some(n=>/SCREW|O RING|VALVOLA|VITE/.test(n));
+  if(cn==='Chassis') return names.some(n=>/^TELAIO\b/.test(n));
+  return false;
+}
+function condLabel(c){ return c==='new' ? 'New' : c==='used' ? 'Used' : ''; }
+function condTag(c){ return c ? ' ('+t('cond.'+c)+')' : ''; }
+function condSummary(list){
+  const c = {}; list.forEach(v=>c[v]=(c[v]||0)+1);
+  return ['new','used'].filter(k=>c[k]).map(k=>t('cond.'+k)+(c[k]>1?' \u00d7'+c[k]:'')).join(' \u00b7 ');
+}
+function condGroups(id){
+  const c = {}; ((cat.conds||{})[id]||[]).forEach(v=>c[v]=(c[v]||0)+1);
+  return ['new','used'].filter(k=>c[k]).map(k=>({value:k, qty:c[k]}));
+}
+function condPickHtml(){
+  return `<div class="cond-pick" id="condPick"><button type="button" class="cond-btn" data-v="new">${escapeHtml(t('cond.new'))}</button><button type="button" class="cond-btn" data-v="used">${escapeHtml(t('cond.used'))}</button></div>`;
+}
+function wireCondPick(){
+  let v = '';
+  document.querySelectorAll('#condPick .cond-btn').forEach(b=>{
+    b.onclick = ()=>{ v = b.dataset.v; document.querySelectorAll('#condPick .cond-btn').forEach(x=>x.classList.toggle('sel', x===b)); };
+  });
+  return ()=>v;
+}
+function askCondition(p){
+  return new Promise(resolve=>{
+    const box = document.getElementById('modalBox');
+    box.innerHTML = `
+      <div class="modal-title">${escapeHtml(t('cond.title'))}</div>
+      <div class="modal-sub"><b>${escapeHtml(pname(p))}</b><br>${escapeHtml(t('cond.prompt'))}</div>
+      ${condPickHtml()}
+      <div class="modal-err" id="condErr"></div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="condCancel">${t('modal.cancel')}</button>
+        <button class="btn" id="condOk">${t('cond.add')}</button>
+      </div>`;
+    document.getElementById('modalOverlay').style.display = 'flex';
+    const get = wireCondPick();
+    document.getElementById('condOk').onclick = ()=>{
+      if(!get()){ document.getElementById('condErr').textContent = t('cond.required'); return; }
+      const v = get(); closeModal(); resolve(v);
+    };
+    document.getElementById('condCancel').onclick = ()=>{ closeModal(); resolve(null); };
+  });
 }
 function allEffectiveParts(){
   const del = (db && db.deletedParts) || {};
@@ -1215,7 +1319,7 @@ const LS_LATEST = 'ricambi_bk_latest', LS_BEST = 'ricambi_bk_best', LS_JOURNAL =
 function dbScore(d){ return ((d&&d.events)||[]).reduce((a,e)=>a+(e.entries||[]).length,0); }
 function lsGet(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
 function lsSet(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
-function entryKey(en){ return [en.ts, en.partId, en.recipientId, en.qty, en.chassisNo||'', en.note||''].join('|'); }
+function entryKey(en){ return [en.ts, en.partId, en.recipientId, en.qty, en.chassisNo||'', en.note||'', en.condition||''].join('|'); }
 let lastLocalBk = 0, lastCloudBk = 0;
 function localBackup(){
   if(!db || !serverLoaded || !(db.events||[]).length) return; // never replace a good copy with an empty state
@@ -1591,12 +1695,31 @@ function exportEventsCsv(){
   }));
   downloadCsv(rows, `events_${todayStr()}.csv`);
 }
+function normEventRow(r){
+  const g = (...ks)=>{ for(const k of ks){ const key = Object.keys(r).find(x=>x.trim().toLowerCase()===k); if(key && String(r[key]).trim()) return String(r[key]).trim(); } return ''; };
+  const nd = v=>{
+    v = String(v||'').trim(); if(!v) return '';
+    let m = v.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/); if(m) return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+    m = v.match(/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})/); if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+    return v;
+  };
+  const st = g('status','stato').toLowerCase();
+  return {
+    label: g('label','event','name','title','evento','nome'),
+    startDate: nd(g('startdate','start','from','date','data','inizio')),
+    endDate: nd(g('enddate','end','to','fine')),
+    location: g('location','venue','circuit','place','luogo','circuito'),
+    billing: g('billing'), status: (st==='closed'||st==='chiuso') ? 'closed' : (st ? 'open' : ''),
+    drivers: g('drivers','piloti'),
+  };
+}
 async function importEventsCsv(){
   const rows = await pickCsvFile();
   if(!rows) return;
   let added = 0, updated = 0;
   const roster = getRosterDrivers();
-  rows.forEach(r=>{
+  rows.forEach(r0=>{
+    const r = normEventRow(r0);
     if(!r.label || !r.startDate) return;
     const wantedNames = (r.drivers||'').split(';').map(s=>s.trim().toLowerCase()).filter(Boolean);
     const driverIds = roster.filter(d=>wantedNames.includes(d.name.toLowerCase())).map(d=>d.id);
@@ -1770,6 +1893,7 @@ function openCatalog(recipient){
   cat.cart = {};
   cat.chassis = {};
   cat.opts = {};
+  cat.conds = {};
   cat.priceRevealed = false;
   cat.search = '';
   cat.catFilter = 'all';
@@ -1883,7 +2007,8 @@ function renderGrid(){
         <div class="card-cat">${c ? escapeHtml(c[uiLang]) : ''}</div>
         ${p.c ? `<div class="card-code">${escapeHtml(p.c)}</div>` : ''}
         ${(p.opt && cat.opts && cat.opts[p.id] && cat.opts[p.id].length) ? `<div class="card-chassis">${optSummary(cat.opts[p.id])}</div>` : ''}
-        ${(p.frame && cat.chassis && cat.chassis[p.id] && cat.chassis[p.id].length) ? `<div class="card-chassis">#${cat.chassis[p.id].map(escapeHtml).join(', #')}</div>` : ''}
+        ${(p.frame && cat.chassis && cat.chassis[p.id] && cat.chassis[p.id].length) ? `<div class="card-chassis">#${cat.chassis[p.id].map((n,i)=>escapeHtml(n)+condTag((cat.conds&&cat.conds[p.id]||[])[i])).join(', #')}</div>` : ''}
+        ${(!p.frame && !p.opt && cat.conds && cat.conds[p.id] && cat.conds[p.id].length) ? `<div class="card-chassis">${condSummary(cat.conds[p.id])}</div>` : ''}
         ${priceHtml}
       </div>
       ${qty>0 ? `<div class="qty-minus">&minus;</div><div class="qty-badge">${qty}</div>` : ''}
@@ -1916,14 +2041,28 @@ function renderGrid(){
 }
 async function addToCart(id){
   const p = getPart(id);
-  if(cat.recipient.type==='group' && p && (p.frame || p.opt)){ showToast(t('quick.notAvail'), true); return; }
+  if(cat.recipient.type==='group' && p && (p.frame || p.opt || needsCondition(p))){ showToast(t('quick.notAvail'), true); return; }
   if(p && p.frame){
     // chassis frames have no SKU: every unit needs its own chassis number, which gets logged with the entry
-    const no = await askChassisNumber(p);
-    if(!no) return;
+    const r = await askChassisNumber(p);
+    if(!r) return;
+    cat.conds = cat.conds || {};
     cat.chassis[id] = cat.chassis[id] || [];
-    cat.chassis[id].push(no);
+    cat.chassis[id].push(r.no);
+    cat.conds[id] = cat.conds[id] || [];
+    cat.conds[id].push(r.cond);
     cat.cart[id] = cat.chassis[id].length;
+    renderGrid(); renderConfirmBar();
+    return;
+  }
+  if(p && !p.opt && needsCondition(p)){
+    // seats / axles / wheels / frames: New or Used is asked for every unit before it is signed out
+    const c = await askCondition(p);
+    if(!c) return;
+    cat.conds = cat.conds || {};
+    cat.conds[id] = cat.conds[id] || [];
+    cat.conds[id].push(c);
+    cat.cart[id] = cat.conds[id].length;
     renderGrid(); renderConfirmBar();
     return;
   }
@@ -1982,7 +2121,16 @@ function changeQty(id, delta){
     renderGrid(); renderConfirmBar();
     return;
   }
+  if(p && !p.frame && !p.opt && needsCondition(p)){
+    cat.conds = cat.conds || {};
+    if(delta<0 && cat.conds[id]){ cat.conds[id].pop(); if(cat.conds[id].length===0) delete cat.conds[id]; }
+    const n = cat.conds[id] ? cat.conds[id].length : 0;
+    if(n===0) delete cat.cart[id]; else cat.cart[id]=n;
+    renderGrid(); renderConfirmBar();
+    return;
+  }
   if(p && p.frame){
+    if(delta<0 && cat.conds && cat.conds[id]){ cat.conds[id].pop(); if(cat.conds[id].length===0) delete cat.conds[id]; }
     if(delta<0 && cat.chassis[id]){ cat.chassis[id].pop(); if(cat.chassis[id].length===0) delete cat.chassis[id]; }
     const n = cat.chassis[id] ? cat.chassis[id].length : 0;
     if(n===0) delete cat.cart[id]; else cat.cart[id]=n;
@@ -2001,6 +2149,7 @@ function askChassisNumber(p){
       <div class="modal-title">${escapeHtml(t('chassis.title'))}</div>
       <div class="modal-sub"><b>${escapeHtml(pname(p))}</b><br>${escapeHtml(t('chassis.prompt'))}</div>
       <input type="text" id="chassisInput" placeholder="${escapeHtml(t('chassis.placeholder'))}" autocomplete="off" autocapitalize="characters" style="width:100%;">
+      ${condPickHtml()}
       <div class="modal-err" id="chassisErr"></div>
       <div class="modal-actions">
         <button class="btn ghost" id="chassisCancel">${t('modal.cancel')}</button>
@@ -2009,17 +2158,20 @@ function askChassisNumber(p){
     overlay.style.display = 'flex';
     const input = document.getElementById('chassisInput');
     const err = document.getElementById('chassisErr');
+    const getCond = wireCondPick();
     setTimeout(()=>input.focus(), 50);
     const submit = ()=>{
       const no = input.value.trim().toUpperCase();
       if(!no){ err.textContent = t('chassis.required'); return; }
+      if(!getCond()){ err.textContent = t('cond.required'); return; }
       const inCart = Object.values(cat.chassis||{}).some(list=>list.includes(no));
       if(inCart){ err.textContent = t('chassis.dupCart'); return; }
       // warn if this chassis number was already given out in any event
       let prior = null;
       (db.events||[]).forEach(ev=>(ev.entries||[]).forEach(en=>{ if(en.chassisNo && String(en.chassisNo).toUpperCase()===no) prior = {ev:ev.label, who:en.recipientName}; }));
       if(prior && !confirm(t('chassis.dupLogged',{no, event:prior.ev, who:prior.who}))) return;
-      closeModal(); resolve(no);
+      const cond = getCond();
+      closeModal(); resolve({no, cond});
     };
     input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submit(); } });
     document.getElementById('chassisOk').onclick = submit;
@@ -2183,9 +2335,11 @@ document.getElementById('confirmBtn').onclick = async ()=>{
       if(isGroup) base.group = cat.recipient.label;
       if(p.frame){
         // one line per physical frame, each with its own chassis number
-        (cat.chassis[id]||[]).forEach(no=> entries.push({...base, qty:1, chassisNo:no}));
+        (cat.chassis[id]||[]).forEach((no,i)=>{ const c = ((cat.conds||{})[id]||[])[i]; entries.push({...base, qty:1, chassisNo:no, ...(c?{condition:c}:{})}); });
       } else if(p.opt){
         optGroups(id).forEach(g=> entries.push({...base, qty:g.qty, optionValue:g.value, note:optNote(g.value)}));
+      } else if(needsCondition(p) && (cat.conds||{})[id]){
+        condGroups(id).forEach(g=> entries.push({...base, qty:g.qty, condition:g.value}));
       } else {
         entries.push({...base, qty});
       }
@@ -2203,7 +2357,7 @@ document.getElementById('confirmBtn').onclick = async ()=>{
     if(!okSave) return; // the selection stays in the basket so nothing has to be re-entered
     journalAdd(ev, entries);
     showToast(isGroup ? t('quick.added',{n:targets.length, event:ev.label}) : t('catalog.addedToEvent', {label: ev.label}));
-    cat.cart = {}; cat.chassis = {}; cat.opts = {}; cat.priceRevealed = false;
+    cat.cart = {}; cat.chassis = {}; cat.opts = {}; cat.conds = {}; cat.priceRevealed = false;
     renderGrid(); renderConfirmBar();
     goHome();
     return;
@@ -2216,20 +2370,20 @@ document.getElementById('confirmBtn').onclick = async ()=>{
     const p = getPart(id);
     const c = catNameById[p.cat];
     const cp = isCust ? customerPrice(p) : null;
-    const lines = p.frame ? (cat.chassis[id]||[]).map(no=>({qty:1, no, note:''})) : p.opt ? optGroups(id).map(g=>({qty:g.qty, no:'', note:optNote(g.value)})) : [{qty:cat.cart[id], no:'', note:''}];
+    const lines = p.frame ? (cat.chassis[id]||[]).map((no,i)=>({qty:1, no, note:'', cond:((cat.conds||{})[id]||[])[i]||''})) : p.opt ? optGroups(id).map(g=>({qty:g.qty, no:'', note:optNote(g.value), cond:''})) : (needsCondition(p) && (cat.conds||{})[id]) ? condGroups(id).map(g=>({qty:g.qty, no:'', note:'', cond:g.value})) : [{qty:cat.cart[id], no:'', note:'', cond:''}];
     lines.forEach(ln=>{
       const row = {
         'Date': dateStr, 'Event': '(no event)', 'Type': isCust ? 'Client' : 'Driver', 'Recipient': cat.recipient.name,
         'Category (EN)': c ? c.en : '',
         'Part name (EN)': p.en, 'Part name (IT)': p.it||'',
-        'Code': p.c||'', 'Chassis no.': ln.no, 'Note': ln.note, 'Qty': ln.qty,
+        'Code': p.c||'', 'Condition': condLabel(ln.cond), 'Chassis no.': ln.no, 'Note': ln.note, 'Qty': ln.qty,
         'Unit price': isCust ? cp : '', 'Currency': isCust ? (p.cur||'EUR') : '',
         'Line total': isCust ? +(cp*ln.qty).toFixed(2) : '',
       };
       rows.push(row);
     });
   });
-  ['Chassis no.','Note'].forEach(col=>{ if(!rows.some(r=>r[col])) rows.forEach(r=>{ delete r[col]; }); });
+  ['Condition','Chassis no.','Note'].forEach(col=>{ if(!rows.some(r=>r[col])) rows.forEach(r=>{ delete r[col]; }); });
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = Object.keys(rows[0]).map(k=>({wch: {'Date':11,'Event':18,'Type':9,'Recipient':20,'Category (EN)':16,'Part name (EN)':32,'Part name (IT)':32,'Code':16,'Chassis no.':14,'Note':26,'Qty':6}[k] || 11}));
   const wb = XLSX.utils.book_new();
@@ -2238,7 +2392,7 @@ document.getElementById('confirmBtn').onclick = async ()=>{
   XLSX.writeFile(wb, `parts-out_${dateStr}_${safe}.xlsx`);
   await saveDb();
   showToast(t('catalog.receiptExported'));
-  cat.cart = {}; cat.chassis = {}; cat.opts = {}; cat.priceRevealed = false;
+  cat.cart = {}; cat.chassis = {}; cat.opts = {}; cat.conds = {}; cat.priceRevealed = false;
   renderGrid(); renderConfirmBar();
 };
 
@@ -2265,7 +2419,7 @@ function openLoggedModal(){
     const p = getPart(en.partId);
     const nm = p ? pname(p) : '?';
     const when = new Date(en.ts).toLocaleString(uiLang==='it'?'it-IT':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const extra = [p&&p.c?p.c:'', en.chassisNo?('#'+en.chassisNo):'', en.note||'', en.group||'', en.staff||'', when].filter(Boolean).join(' \u00b7 ');
+    const extra = [p&&p.c?p.c:'', en.chassisNo?('#'+en.chassisNo):'', en.condition?t('cond.'+en.condition):'', en.note||'', en.group||'', en.staff||'', when].filter(Boolean).join(' \u00b7 ');
     const row = document.createElement('div'); row.className = 'log-row';
     row.innerHTML = `<div class="log-qty">${en.qty}\u00d7</div><div class="log-main"><div class="log-name">${escapeHtml(nm)}</div><div class="log-meta">${escapeHtml(extra)}</div></div><button class="tile-del" title="${escapeHtml(t('common.remove'))}">&#10005;</button>`;
     row.querySelector('button').onclick = async ()=>{
@@ -2322,6 +2476,7 @@ function openProductModal(existing){
   const del = document.getElementById('prodDel');
   if(del) del.onclick = async ()=>{
     if(!confirm(t('prod.deleteConfirm',{name:pname(existing)}))) return;
+    logChange(existing,'deleted',existing.en||existing.it,'');
     db.customParts = db.customParts.filter(x=>x.id!==existing.id);
     syncCustomParts(); closeModal(); await saveDb(); renderCustomProducts(); renderProductsTable(document.getElementById('productSearch').value);
     showToast(t('prod.deleted',{name:pname(existing)}));
@@ -2338,6 +2493,10 @@ function openProductModal(existing){
     const pr = parseFloat(document.getElementById('prodPrice').value);
     const part = {id: existing ? existing.id : 'x'+Date.now().toString(36), c, en, it, cat: parseInt(document.getElementById('prodCat').value,10),
       price: isNaN(pr) ? null : pr, img: photo, stock:'', ch:''};
+    if(existing){
+      ['c','en','it','price'].forEach(f=>logChange(part, f==='c'?'sku':f==='en'?'name_en':f==='it'?'name_it':f, existing[f], part[f]));
+      if((existing.img||'')!==(part.img||'')) logChange(part,'photo',existing.img?'(photo)':'','(new photo)');
+    } else logChange(part,'created','',part.en||part.it);
     if(existing) db.customParts = db.customParts.map(x=>x.id===existing.id ? part : x); else db.customParts.push(part);
     syncCustomParts(); closeModal(); await saveDb(); renderCustomProducts(); renderProductsTable(document.getElementById('productSearch').value);
     showToast(t('prod.saved',{name:pname(part)}));
@@ -2713,11 +2872,110 @@ function renderEventTable(){
   });
 }
 document.getElementById('newEventBtn').onclick = adminCreateEvent;
-document.getElementById('importEventsBtn').onclick = importEventsCsv;
-document.getElementById('exportEventsBtn').onclick = exportEventsCsv;
+document.getElementById('importCalendarBtn').onclick = importEventsCsv;
+document.getElementById('exportCurrentEventBtn').onclick = ()=>{
+  const ev = currentEvent();
+  if(!ev){ showToast(t('admin.events.noCurrent'), true); return; }
+  exportEventReport(ev);
+};
+document.getElementById('calendarTemplateBtn').onclick = ()=>{
+  downloadCsv([{label:'Example GP', startDate:'2026-10-10', endDate:'2026-10-12', location:'Lonato', billing:'', status:'open', drivers:''}], 'events-template.csv');
+};
 
 /* ---- Products (parts) admin: price/name overrides + CSV ---- */
+function logChange(p, field, from, to){
+  const f = from==null ? '' : String(from), n = to==null ? '' : String(to);
+  if(f===n) return;
+  if(!db.productChanges) db.productChanges = [];
+  db.productChanges.push({ts:Date.now(), by:(session.user||{}).name||'', key:pkey(p), sku:p.c||'', name:p.en||p.it||'', field, from:f, to:n});
+  updateChangesBtn();
+}
+function updateChangesBtn(){
+  const b = document.getElementById('exportChangesBtn');
+  if(b) b.textContent = t('prod.exportChanges',{n:(db.productChanges||[]).length});
+}
+function exportChanges(){
+  const list = db.productChanges||[];
+  if(!list.length){ showToast(t('prod.noChanges'), true); return; }
+  const pad = n=>String(n).padStart(2,'0');
+  const rows = list.map(c=>{ const d = new Date(c.ts); return {
+    date: d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()), time: pad(d.getHours())+':'+pad(d.getMinutes()),
+    by: c.by, sku: c.sku, product: c.name, field: c.field, from: c.from, to: c.to }; });
+  downloadCsv(rows, `product-changes_${todayStr()}.csv`);
+  if(confirm(t('prod.clearAsk'))){ db.productChanges = []; saveDb(); updateChangesBtn(); }
+}
+document.getElementById('exportChangesBtn').onclick = exportChanges;
+function reindexOverrideSkus(){
+  Object.entries((db && db.partOverrides) || {}).forEach(([k,o])=>{
+    if(!o || !o.c) return;
+    const id = k.charAt(0)==='#' ? k.slice(1) : skuToPartId[k];
+    if(id!=null && partBaseById[id]) skuToPartId[o.c] = partBaseById[id].id;
+  });
+}
+function skuTaken(c, exceptId){
+  const low = c.toLowerCase();
+  return allEffectiveParts().find(p=>p.c && p.c.toLowerCase()===low && p.id!==exceptId) || null;
+}
+function openPartEditModal(p){
+  const base = partBaseById[p.id];
+  const k = pkey(base);
+  let photo = p.img || '';
+  const box = document.getElementById('modalBox');
+  const skuLocked = !!base.c;
+  box.innerHTML = `
+    <div class="modal-title">${escapeHtml(t('pe.title'))}</div>
+    <div class="modal-field"><div style="display:flex;align-items:center;gap:12px;"><img id="pePhotoPrev" style="width:72px;height:72px;object-fit:cover;border-radius:8px;background:#1e2224;${photo?'':'visibility:hidden;'}" ${photo?`src="${photo}"`:''}>
+      <button class="btn ghost" id="pePhotoBtn" type="button">${escapeHtml(t('prod.choosePhoto'))}</button></div>
+      <input type="file" id="pePhotoFile" accept="image/*" style="display:none;"></div>
+    <div class="modal-field"><label>${escapeHtml(t(skuLocked?'pe.skuFixed':'pe.skuAdd'))}</label><input type="text" id="peSku" value="${escapeHtml(p.c||'')}" autocapitalize="characters" ${skuLocked?'disabled':''}></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.nameEn'))}</label><input type="text" id="peEn" value="${escapeHtml(p.en||'')}"></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.nameIt'))}</label><input type="text" id="peIt" value="${escapeHtml(p.it||'')}"></div>
+    <div class="modal-field"><label>${escapeHtml(t('prod.price'))}</label><input type="number" step="0.01" inputmode="decimal" id="pePrice" value="${p.price!=null?p.price:''}"></div>
+    <div class="modal-err" id="peErr"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="peCancel">${t('modal.cancel')}</button>
+      <button class="btn" id="peSave">${t('modal.save')}</button>
+    </div>`;
+  document.getElementById('modalOverlay').style.display = 'flex';
+  const fileEl = document.getElementById('pePhotoFile');
+  document.getElementById('pePhotoBtn').onclick = ()=> fileEl.click();
+  fileEl.onchange = async ()=>{
+    if(!fileEl.files[0]) return;
+    photo = await resizeImageFile(fileEl.files[0], 220, 0.6);
+    const pv = document.getElementById('pePhotoPrev'); pv.src = photo; pv.style.visibility = 'visible';
+  };
+  document.getElementById('peCancel').onclick = closeModal;
+  document.getElementById('peSave').onclick = async ()=>{
+    const err = document.getElementById('peErr');
+    const en = document.getElementById('peEn').value.trim(), it = document.getElementById('peIt').value.trim();
+    if(!en && !it){ err.textContent = t('prod.nameRequired'); return; }
+    const sku = skuLocked ? (p.c||'') : document.getElementById('peSku').value.trim();
+    if(!skuLocked && sku){
+      const clash = skuTaken(sku, p.id);
+      if(clash){ err.textContent = t('prod.skuDup',{name:pname(clash)}); return; }
+    }
+    const pr = parseFloat(document.getElementById('pePrice').value);
+    const price = isNaN(pr) ? null : pr;
+    const o = db.partOverrides[k] = db.partOverrides[k] || {};
+    let n = 0;
+    const chg = (field, from, to)=>{ if(String(from==null?'':from)!==String(to==null?'':to)){ logChange(p, field, from, to); n++; } };
+    chg('name_en', p.en, en); chg('name_it', p.it, it);
+    chg('price', p.price, price);
+    if(!skuLocked) chg('sku', p.c, sku);
+    if((p.img||'')!==(photo||'')){ logChange(p, 'photo', p.img?'(photo)':'', '(new photo)'); n++; }
+    if(!n){ closeModal(); showToast(t('pe.nothing')); return; }
+    o.en = en; o.it = it; o.price = price;
+    if(!skuLocked && sku) o.c = sku;
+    if(photo && photo!==base.img) o.img = photo; else delete o.img;
+    reindexOverrideSkus();
+    closeModal();
+    await saveDb();
+    renderProductsTable(document.getElementById('productSearch').value);
+    showToast(t('pe.saved',{name:en||it}));
+  };
+}
 function renderProductsTable(q){
+  updateChangesBtn();
   const wrap = document.getElementById('productTableWrap');
   q = (q||'').trim();
   if(q.length < 2){
@@ -2731,35 +2989,26 @@ function renderProductsTable(q){
   if(matches.length===0){ wrap.innerHTML = `<div class="empty-note">${t('admin.products.noMatch')}</div>`; return; }
   const table = document.createElement('table');
   table.className = 'data-table';
-  table.innerHTML = `<thead><tr><th></th><th>${t('admin.products.thCode')}</th><th>${t('admin.products.thNameEn')}</th><th>${t('admin.products.thPrice')}</th><th></th></tr></thead><tbody></tbody>`;
+  table.innerHTML = `<thead><tr><th></th><th>${t('admin.products.thCode')}</th><th>${t('admin.products.thNames')}</th><th>${t('admin.products.thPrice')}</th><th></th></tr></thead><tbody></tbody>`;
   const tbody = table.querySelector('tbody');
   matches.forEach(p=>{
     const tr = document.createElement('tr');
     tr.innerHTML = `<td class="thumb-cell">${p.img ? `<img class="part-thumb" src="${p.img}">` : ''}</td>
       <td>${escapeHtml(p.c||'')}</td>
-      <td>${escapeHtml(p.en)}</td>
+      <td><div>${p.en ? escapeHtml(p.en) : `<span class="name-it">${escapeHtml(t('admin.products.noEn'))}</span>`}</div><div class="name-it">${p.it ? escapeHtml(p.it) : escapeHtml(t('admin.products.noIt'))}</div></td>
       <td><input type="number" step="0.01" class="price-input" value="${p.price!=null?p.price:''}"></td>
-      <td class="row-actions"><button data-act="name">${t('admin.products.editNameBtn')}</button></td>`;
+      <td class="row-actions"><button data-act="name">${t('admin.products.editBtn')}</button></td>`;
     const priceInput = tr.querySelector('.price-input');
     priceInput.addEventListener('change', async ()=>{
       const k = pkey(p);
       db.partOverrides[k] = db.partOverrides[k] || {};
       const v = parseFloat(priceInput.value);
+      logChange(p, 'price', p.price, isNaN(v) ? null : v);
       db.partOverrides[k].price = isNaN(v) ? null : v;
       await saveDb();
       showToast(t('admin.products.priceUpdated', {sku: p.c||p.en}));
     });
-    tr.querySelector('[data-act="name"]').onclick = async ()=>{
-      const k = pkey(p);
-      const en = prompt(t('admin.products.nameEnPrompt'), p.en); if(en===null || !en.trim()) return;
-      const it = prompt(t('admin.products.nameItPrompt'), p.it||''); if(it===null) return;
-      db.partOverrides[k] = db.partOverrides[k] || {};
-      db.partOverrides[k].en = en.trim();
-      db.partOverrides[k].it = it.trim();
-      await saveDb();
-      renderProductsTable(document.getElementById('productSearch').value);
-      showToast(t('admin.products.nameUpdated', {sku: p.c||p.en}));
-    };
+    tr.querySelector('[data-act="name"]').onclick = ()=>{ if(p.custom) openProductModal(partBaseById[p.id]); else openPartEditModal(p); };
     tbody.appendChild(tr);
   });
   wrap.innerHTML = '';
@@ -2787,12 +3036,13 @@ async function importProductsCsv(){
   rows.forEach(r=>{
     const sku = (r.sku||'').trim();
     if(!sku || !skuToPartId[sku]){ skipped++; return; }
-    db.partOverrides[sku] = db.partOverrides[sku] || {};
-    if(r.name_en) db.partOverrides[sku].en = r.name_en;
-    if(r.name_it) db.partOverrides[sku].it = r.name_it;
+    const base = partBaseById[skuToPartId[sku]]; const cur = getPart(base.id); const k = pkey(base);
+    const o = db.partOverrides[k] = db.partOverrides[k] || {};
+    if(r.name_en){ logChange(cur,'name_en',cur.en,r.name_en); o.en = r.name_en; }
+    if(r.name_it){ logChange(cur,'name_it',cur.it,r.name_it); o.it = r.name_it; }
     if(r.price_eur !== undefined && r.price_eur !== ''){
       const v = parseFloat(r.price_eur);
-      if(!isNaN(v)) db.partOverrides[sku].price = v;
+      if(!isNaN(v)){ logChange(cur,'price',cur.price,v); o.price = v; }
     }
     updated++;
   });
@@ -2804,39 +3054,49 @@ document.getElementById('importProductsBtn').onclick = importProductsCsv;
 document.getElementById('exportProductsBtn').onclick = exportProductsCsv;
 function exportEventReport(ev){
   if(ev.entries.length===0){ showToast(t('admin.events.noEntries'), true); return; }
-  const driverRows = [], custRows = [];
-  ev.entries.forEach(en=>{
+  const pad = n=>String(n).padStart(2,'0');
+  const optional = ['Condition','Chassis no.','Note','Quick-add group','Unit price','Currency','Line total'];
+  const prune = list=>{ optional.forEach(col=>{ if(!list.some(r=>r[col]!==undefined && r[col]!=='' && r[col]!==null)) list.forEach(r=>{ delete r[col]; }); }); };
+  const widths = {'#':5,'Date':11,'Time':7,'Type':8,'Recipient':20,'Category (EN)':16,'Part name (EN)':34,'Part name (IT)':34,'Code':16,'Condition':10,'Chassis no.':14,'Note':26,'Qty':6,'Logged by':12,'Quick-add group':16};
+  const sheetFrom = rows=>{ const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = Object.keys(rows[0]).map(k=>({wch:widths[k]||11})); return ws; };
+  const groups = {}, logRows = [];
+  ev.entries.forEach((en,i)=>{
     const p = getPart(en.partId);
     if(!p) return;
+    const isCust = en.recipientType==='customer';
     const c = catNameById[p.cat];
-    const base = {
-      'Date': new Date(en.ts).toISOString().slice(0,10),
+    const d = new Date(en.ts);
+    const row = {
+      'Date': d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()), 'Time': pad(d.getHours())+':'+pad(d.getMinutes()),
       'Recipient': en.recipientName,
-      'Category (EN)': c?c.en:'',
-      'Part name (EN)': p.en, 'Part name (IT)': p.it||'',
-      'Code': p.c||'', 'Chassis no.': en.chassisNo||'', 'Note': en.note||'', 'Qty': en.qty, 'Logged by': en.staff,
+      'Category (EN)': c?c.en:'', 'Part name (EN)': p.en||p.it||'', 'Part name (IT)': p.it||'',
+      'Code': p.c||'', 'Condition': condLabel(en.condition), 'Chassis no.': en.chassisNo||'', 'Note': en.note||'', 'Qty': en.qty,
+      'Logged by': en.staff||'', 'Quick-add group': en.group||'',
     };
-    if(en.group) base['Quick-add group'] = en.group;
-    if(en.recipientType==='customer'){
-      custRows.push({...base, 'Unit price': en.unitPrice, 'Currency': p.cur||'EUR', 'Line total': +(en.unitPrice*en.qty).toFixed(2)});
-    } else {
-      driverRows.push(base);
-    }
-  });
-  // only keep the optional columns when at least one row uses them
-  [driverRows, custRows].forEach(list=>{
-    ['Chassis no.','Note','Quick-add group'].forEach(col=>{
-      if(!list.some(r=>r[col])) list.forEach(r=>{ delete r[col]; });
-    });
+    if(isCust){ row['Unit price'] = en.unitPrice; row['Currency'] = p.cur||'EUR'; row['Line total'] = +((en.unitPrice||0)*en.qty).toFixed(2); }
+    const gk = (isCust?'C':'D')+'|'+en.recipientName;
+    (groups[gk] = groups[gk] || {type:isCust?'C':'D', name:en.recipientName, rows:[]}).rows.push(row);
+    logRows.push({'#': logRows.length+1, 'Date':row['Date'], 'Time':row['Time'], 'Type': isCust?'Client':'Driver', ...Object.fromEntries(Object.entries(row).filter(([k])=>k!=='Date'&&k!=='Time'))});
   });
   const wb = XLSX.utils.book_new();
-  if(driverRows.length){
-    const ws1 = XLSX.utils.json_to_sheet(driverRows);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Driver usage');
-  }
-  if(custRows.length){
-    const ws2 = XLSX.utils.json_to_sheet(custRows);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Client invoicing');
+  const used = new Set();
+  const sheetName = (type,name)=>{
+    const clean = String(name||'?').replace(/[\\\/?*\[\]:]/g,' ').replace(/\s+/g,' ').trim();
+    let base = (type+' - '+clean).slice(0,31), nm = base, n = 2;
+    while(used.has(nm.toLowerCase())){ const suf = ' '+n++; nm = base.slice(0,31-suf.length)+suf; }
+    used.add(nm.toLowerCase()); return nm;
+  };
+  const ordered = Object.values(groups).sort((a,b)=> (a.type===b.type ? 0 : a.type==='D' ? -1 : 1) || a.name.localeCompare(b.name));
+  ordered.forEach(g=>{
+    prune(g.rows);
+    if(g.type==='C' && g.rows.some(r=>r['Line total']!==undefined)){
+      g.rows.push({'Part name (EN)':'TOTAL', 'Line total': +g.rows.reduce((a,r)=>a+(+r['Line total']||0),0).toFixed(2)});
+    }
+    XLSX.utils.book_append_sheet(wb, sheetFrom(g.rows), sheetName(g.type==='D'?'D':'C', g.name));
+  });
+  if(logRows.length){
+    prune(logRows);
+    XLSX.utils.book_append_sheet(wb, sheetFrom(logRows), 'Log');
   }
   const safe = ev.label.replace(/[^a-z0-9]+/gi,'-').replace(/^-+|-+$/g,'');
   XLSX.writeFile(wb, `event-report_${ev.startDate}_${safe}.xlsx`);
@@ -2873,7 +3133,9 @@ function migrateDb(){
   if(!db.deletedParts) db.deletedParts = {};
   if(!db.driverCategories) db.driverCategories = {};
   if(!db.customParts) db.customParts = [];
+  if(!db.productChanges) db.productChanges = [];
   syncCustomParts();
+  reindexOverrideSkus();
   if(!db.inventory) db.inventory = {};
   if(!db.inventoryCustom) db.inventoryCustom = [];
   // one-time: add Damiano (admin, PIN login, inventory access). The flag stops it coming back if he is removed later.
